@@ -1,15 +1,18 @@
 #include <sys/types.h> 
 #include <stdio.h> 
 #include <unistd.h> 
+#include <sys/wait.h>
 
 int main() 
 { 
     pid_t pid, pid1, pid2, pid0,pid3,pid4,pid5; 
-    /* fork a child process */ 
-    pid = fork(); 
+
+    /* fork a child process */
+    pid = fork();
     if (pid < 0) { /* error occurred */ 
-        fprintf(stderr, "First Fork Failed"); 
-        return 1; } 
+        fprintf(stderr, "First Fork Failed");
+        return 1; 
+    }
     else if (pid == 0) { /* child process */ 
         pid1 = getppid();
         pid2= getpid();
@@ -18,7 +21,7 @@ int main()
         printf("Parent PID = %d\n",pid1);
         pid3= fork();
         if (pid3 < 0) {
-            fprintf(stderr, “Second fork failed”);
+            fprintf(stderr, "Second fork failed");
             return 1;
         } 
         else if (pid3==0) /*Grandchild process */ { 
