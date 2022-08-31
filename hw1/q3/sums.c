@@ -14,62 +14,35 @@ int elem[30] = {
     22, 26, 30, 34
 };
 
-void *PartialSums(void *threadid)
-{
-    int id = (int) threadid; // cast to int
+void *PartialSums(void *threadid) {
+    int id = (int) (int *) threadid; // cast to int
 
-    int i;
-    switch(id)
-    {
-        case 0:
-            for(i = 0; i < 5; i++) sum += elem[i];
-            break;
-            
-        case 1:
-            for(i = 5; i < 10; i++) sum += elem[i];
-            break;
-
-        case 2:
-            for (i = 10; i < 15; i++) sum += elem[i];
-            break;
-
-        case 3:
-            for (i = 15; i < 20; i++) sum += elem[i];
-            break;
-
-        case 4:
-            for (i = 20; i < 25; i++) sum += elem[i];
-            break;
-
-        case 5:
-            for(i = 25; i < 30; i++) sum += elem[i];
-            break;
-
-        default:
-            fprintf(stderr, "Invalid thread id: %d\n", *(int*) threadid);
-            break;
+    if (id < 0 || id >= NUM_THREADS) {
+        fprintf(stderr, "Error: invalid thread id %d\n", id);
+    }
+    else {
+        int i, offset = 5;
+        for(i = offset * id; i < offset * (id + 1); i++) sum += elem[i];
     }
 
     pthread_exit(NULL);
-
 }
 
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
     pthread_t threads[NUM_THREADS];
     int rc, t;
 
-    for(t = 0;t < NUM_THREADS; t++){
+    for(t = 0;t < NUM_THREADS; t++) {
         //printf("Creating thread %d\n", t);
         rc = pthread_create(&threads[t], NULL, PartialSums, (void *)t);
-        if (rc){
+        if (rc) {
             printf("ERROR; return code from pthread_create() is %d\n", rc);
             exit(-1);
         }
-        
-        pthread_join(threads[t], NULL);
     }
 
+    int i;
+    for(i = 0; i < NUM_THREADS; i++) pthread_join(threads[i], NULL);
 
     printf(" Sum: %d\n", sum);
     pthread_exit(NULL);
