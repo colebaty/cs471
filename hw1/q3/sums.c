@@ -6,12 +6,9 @@
 int counter = 0;
 int sum = 0;
 int elem[30] = {
-    20, 18, 16, 14, 12, 
-    10, 8, 6, 4, 2, 
-    -20, -18, -16, -14, -12, 
-    -10, -8, -6, -4, -2,
-    2, 6, 10, 14, 18, 
-    22, 26, 30, 34
+    20, 18, 16, 14, 12, 10, 8, 6, 4, 2, 
+    -20, -18, -16, -14, -12, -10, -8, -6, -4, -2,
+    2, 6, 10, 14, 18, 22, 26, 30, 34, 38
 };
 
 void *PartialSums(void *threadid) {
@@ -33,7 +30,7 @@ int main(int argc, char *argv[]) {
     int rc, t;
 
     for(t = 0;t < NUM_THREADS; t++) {
-        //printf("Creating thread %d\n", t);
+        printf("Creating thread %d\n", t);
         rc = pthread_create(&threads[t], NULL, PartialSums, (void *)t);
         if (rc) {
             printf("ERROR; return code from pthread_create() is %d\n", rc);
