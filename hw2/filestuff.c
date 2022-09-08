@@ -33,5 +33,7 @@ int main (int argc, char **argv) {
         printf("Process %d: %d\t%d\n", p->id, p->arr, p->burst);
     }
 
+    free(p);
+
     return 0;
 }
