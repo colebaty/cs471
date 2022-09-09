@@ -15,22 +15,15 @@ static struct Process {
     int burst;
     int completion;
     TAILQ_ENTRY(Process) entries;
-} *p, *pp, *prev;
+} *p, *prev;
 
-int main (int argc, char **argv) {
-    if (argc < 2) {
-        printf("\tUsage: ./a.out <file>\n");
-        return 1;
-    }
-
-    TAILQ_INIT(&head);
-
+void readFile(char * filename) {
     FILE *fp;
     char *line = NULL;
     size_t len = 0;
     ssize_t nread;
 
-    fp = fopen(argv[1], "r");
+    fp = fopen(filename, "r");
 
     //discard first line
     getline(&line, &len, fp);
@@ -46,6 +39,10 @@ int main (int argc, char **argv) {
         TAILQ_INSERT_TAIL(&head, p, entries);
     }
 
+
+}
+
+void computeCompleteTimes() {
     TAILQ_FOREACH(p, &head, entries) {
         prev = TAILQ_PREV(p, tailhead, entries);
         if (prev != NULL) { // if not first element
@@ -58,13 +55,29 @@ int main (int argc, char **argv) {
             p->completion = p->arr + p->burst;
         }
     }
+}
 
+void print() {
     printf("Process ID\tArrival\tCPU burst\tCompletion\n");
     TAILQ_FOREACH(p, &head, entries) {
         printf("%d\t\t%d\t%d\t\t%d\t\n", p->id, p->arr, p->burst, p->completion);
     }
 
+}
 
+int main (int argc, char **argv) {
+    if (argc < 2) {
+        printf("\tUsage: ./a.out <file>\n");
+        return 1;
+    }
+
+    TAILQ_INIT(&head);
+
+    readFile(argv[1]);
+    computeCompleteTimes();
+    print();
+
+    //housekeeping
     while (!TAILQ_EMPTY(&head)) {
         p = TAILQ_FIRST(&head);
         TAILQ_REMOVE(&head, p, entries);
