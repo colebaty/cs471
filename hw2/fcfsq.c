@@ -18,6 +18,11 @@ static struct Process {
 } *p, *pp, *prev;
 
 int main (int argc, char **argv) {
+    if (argc < 2) {
+        printf("\tUsage: ./a.out <file>\n");
+        return 1;
+    }
+
     TAILQ_INIT(&head);
 
     FILE *fp;
@@ -25,7 +30,7 @@ int main (int argc, char **argv) {
     size_t len = 0;
     ssize_t nread;
 
-    fp = fopen("data", "r");
+    fp = fopen(argv[1], "r");
 
     //discard first line
     getline(&line, &len, fp);
@@ -41,10 +46,24 @@ int main (int argc, char **argv) {
         TAILQ_INSERT_TAIL(&head, p, entries);
     }
 
-    TAILQ_FOREACH(p, &head, entries)
-    {
+    TAILQ_FOREACH(p, &head, entries) {
         prev = TAILQ_PREV(p, tailhead, entries);
+        if (prev != NULL) { // if not first element
+            if (p->arr > prev->completion) 
+                p->completion = prev->completion + (p->arr - prev->completion) + p->burst;
+            else
+                p->completion = prev->completion + p->burst; // add this burst time to previous element's completion time
+        }
+        else { // first element
+            p->completion = p->arr + p->burst;
+        }
     }
+
+    printf("Process ID\tArrival\tCPU burst\tCompletion\n");
+    TAILQ_FOREACH(p, &head, entries) {
+        printf("%d\t\t%d\t%d\t\t%d\t\n", p->id, p->arr, p->burst, p->completion);
+    }
+
 
     while (!TAILQ_EMPTY(&head)) {
         p = TAILQ_FIRST(&head);
