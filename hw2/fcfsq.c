@@ -39,7 +39,7 @@ void readFile(char * filename) {
         TAILQ_INSERT_TAIL(&head, p, entries);
     }
 
-
+    fclose(fp);
 }
 
 void computeCompleteTimes() {
@@ -62,7 +62,6 @@ void print() {
     TAILQ_FOREACH(p, &head, entries) {
         printf("%d\t\t%d\t%d\t\t%d\t\n", p->id, p->arr, p->burst, p->completion);
     }
-
 }
 
 int main (int argc, char **argv) {
