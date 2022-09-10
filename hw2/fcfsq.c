@@ -47,9 +47,11 @@ void computeCompleteTimes() {
         prev = TAILQ_PREV(p, tailhead, entries);
         if (prev != NULL) { // if not first element
             if (p->arr > prev->completion) 
-                p->completion = prev->completion + (p->arr - prev->completion) + p->burst;
+                p->completion = prev->completion 
+                    + (p->arr - prev->completion) + p->burst;
             else
-                p->completion = prev->completion + p->burst; // add this burst time to previous element's completion time
+                // add this burst time to previous element's completion time
+                p->completion = prev->completion + p->burst; 
         }
         else { // first element
             p->completion = p->arr + p->burst;
