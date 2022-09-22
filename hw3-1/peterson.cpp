@@ -42,7 +42,8 @@ void pi (int & license, default_random_engine & gen, binomial_distribution<time_
     do {
         /* entry section */
         flag[i] = true;
-        cout << "Time: " << getTime() << " Thread 1 requested the resource " << endl;
+        cout << "Time: " << getTime() 
+             << " Thread 1 requested the resource " << endl;
         turn = j; /* generous */
         while (flag[j] == true && turn == j); /* busy wait */
 
@@ -56,14 +57,15 @@ void pi (int & license, default_random_engine & gen, binomial_distribution<time_
         cout << "Time: " << getTime() << " Thread 1 released the resource " << endl;
         /* exit section */
         flag[i] = false;
-    } while (picount++ < 3);
+    } while (picount++ < 3); /* do-while guarantees at least one rep */
 }
 
 void pj (int & license, default_random_engine & gen, binomial_distribution<time_t> & ndist) {
     do {
         /* entry section */
         flag[j] = true;
-        cout << "Time: " << getTime() << " Thread 2 requested the resource " << endl;
+        cout << "Time: " << getTime() 
+             << " Thread 2 requested the resource " << endl;
         turn = i; /* generous */
         while (flag[i] == true && turn == i); /* busy wait */
 
@@ -77,7 +79,7 @@ void pj (int & license, default_random_engine & gen, binomial_distribution<time_
         cout << "Time: " << getTime() << " Thread 2 released the resource " << endl;
         /* exit section */
         flag[j] = false;
-    } while (pjcount++ < 3);
+    } while (pjcount++ < 2); /* do-while guarantees at least one rep */
 }
 
 int main() {
