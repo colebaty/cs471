@@ -4,6 +4,7 @@
 #include <chrono>
 #include <random>
 #include <string>
+#include <unistd.h> // for usleep()
 
 using namespace std;
 using namespace chrono_literals;
@@ -16,6 +17,8 @@ int turn = 0;
 int license; /* will contain id of process "using" the license */
 
 int picount = 0, pjcount = 0;
+
+chrono::duration<time_t, milli> * ms; // for this_thread::sleep()
 
 string getTime() {
     auto now(chrono::system_clock::now());
@@ -46,8 +49,9 @@ void pi (int & license, default_random_engine & gen, binomial_distribution<time_
         /* critical section */
         license = i;
         cout << "Time: " << getTime() << " Thread 1 received the resource " << endl;
-        chrono::duration<int, milli> ms(ndist(gen));
-        this_thread::sleep_for(ms);
+        ms = new chrono::duration<time_t, milli>(ndist(gen));
+        this_thread::sleep_for(*ms);
+        delete ms;
 
         cout << "Time: " << getTime() << " Thread 1 released the resource " << endl;
         /* exit section */
@@ -66,14 +70,16 @@ void pj (int & license, default_random_engine & gen, binomial_distribution<time_
         /* critical section */
         license = j;
         cout << "Time: " << getTime() << " Thread 2 received the resource " << endl;
-        chrono::duration<int, milli> ms(ndist(gen));
-        this_thread::sleep_for(ms);
+        ms = new chrono::duration<time_t, milli>(ndist(gen));
+        this_thread::sleep_for(*ms);
+        delete ms;
 
         cout << "Time: " << getTime() << " Thread 2 released the resource " << endl;
         /* exit section */
         flag[j] = false;
     } while (pjcount++ < 3);
 }
+
 int main() {
     default_random_engine gen(time(NULL));
     binomial_distribution<time_t> ndist(1000);
@@ -81,6 +87,7 @@ int main() {
     flag[i] = flag[j] = false;
 
     thread t1(pi, ref(license), ref(gen), ref(ndist));
+    usleep(100000);
     thread t2(pj, ref(license), ref(gen), ref(ndist));
 
     t1.join();
