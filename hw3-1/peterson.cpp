@@ -49,9 +49,9 @@ void pi (int & license, default_random_engine & gen, binomial_distribution<time_
         chrono::duration<int, milli> ms(ndist(gen));
         this_thread::sleep_for(ms);
 
+        cout << "Time: " << getTime() << " Thread 1 released the resource " << endl;
         /* exit section */
         flag[i] = false;
-        cout << "Time: " << getTime() << " Thread 1 released the resource " << endl;
     } while (picount++ < 3);
 }
 
@@ -69,9 +69,9 @@ void pj (int & license, default_random_engine & gen, binomial_distribution<time_
         chrono::duration<int, milli> ms(ndist(gen));
         this_thread::sleep_for(ms);
 
+        cout << "Time: " << getTime() << " Thread 2 released the resource " << endl;
         /* exit section */
         flag[j] = false;
-        cout << "Time: " << getTime() << " Thread 2 released the resource " << endl;
     } while (pjcount++ < 3);
 }
 int main() {
