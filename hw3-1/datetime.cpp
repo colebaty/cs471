@@ -1,11 +1,12 @@
 #include <iostream>
 #include <chrono>
+#include <ctime>
 
 using namespace std;
 
 int main() {
-    auto now = chrono::steady_clock::now();
-    cout << "steady_clock" << now << endl;
+    time_t now = chrono::system_clock::to_time_t(chrono::system_clock::now());
+    cout << "chrono::system_clock: " << ctime(&now)<< endl;
 
     return 0;
 }
