@@ -38,7 +38,8 @@ string getTime() {
         to_string((now.time_since_epoch() - seconds_since_epoch).count());
 }
 
-void pi (int & license, default_random_engine & gen, binomial_distribution<time_t> & ndist) {
+void pi (int & license, default_random_engine & gen, 
+            binomial_distribution<time_t> & ndist) {
     do {
         /* entry section */
         flag[i] = true;
@@ -49,18 +50,21 @@ void pi (int & license, default_random_engine & gen, binomial_distribution<time_
 
         /* critical section */
         license = i;
-        cout << "Time: " << getTime() << " Thread 1 received the resource " << endl;
+        cout << "Time: " << getTime() 
+             << " Thread 1 received the resource " << endl;
         ms = new chrono::duration<time_t, milli>(ndist(gen));
         this_thread::sleep_for(*ms);
         delete ms;
 
-        cout << "Time: " << getTime() << " Thread 1 released the resource " << endl;
+        cout << "Time: " << getTime() 
+             << " Thread 1 released the resource " << endl;
         /* exit section */
         flag[i] = false;
     } while (picount++ < 3); /* do-while guarantees at least one rep */
 }
 
-void pj (int & license, default_random_engine & gen, binomial_distribution<time_t> & ndist) {
+void pj (int & license, default_random_engine & gen, 
+            binomial_distribution<time_t> & ndist) {
     do {
         /* entry section */
         flag[j] = true;
@@ -71,12 +75,14 @@ void pj (int & license, default_random_engine & gen, binomial_distribution<time_
 
         /* critical section */
         license = j;
-        cout << "Time: " << getTime() << " Thread 2 received the resource " << endl;
+        cout << "Time: " << getTime() 
+             << " Thread 2 received the resource " << endl;
         ms = new chrono::duration<time_t, milli>(ndist(gen));
         this_thread::sleep_for(*ms);
         delete ms;
 
-        cout << "Time: " << getTime() << " Thread 2 released the resource " << endl;
+        cout << "Time: " << getTime() 
+             << " Thread 2 released the resource " << endl;
         /* exit section */
         flag[j] = false;
     } while (pjcount++ < 2); /* do-while guarantees at least one rep */
