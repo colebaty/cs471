@@ -2,5 +2,5 @@
 *.o
 *.out
 .gdb*
-*.c.html
+*.html
 *.pdf
