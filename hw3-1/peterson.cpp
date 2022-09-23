@@ -60,7 +60,7 @@ void pi (int & license, default_random_engine & gen,
              << " Thread 1 released the resource " << endl;
         /* exit section */
         flag[i] = false;
-    } while (picount++ < 3); /* do-while guarantees at least one rep */
+    } while (picount++ < 2); /* do-while guarantees at least one rep */
 }
 
 void pj (int & license, default_random_engine & gen, 
