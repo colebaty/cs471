@@ -4,3 +4,4 @@
 .gdb*
 *.html
 *.pdf
+.vscode*
