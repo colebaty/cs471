@@ -5,3 +5,5 @@
 *.html
 *.pdf
 .vscode*
+*.exe
+temp*.cpp
