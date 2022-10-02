@@ -81,8 +81,6 @@ int main()
     default_random_engine  gen(time(NULL));
     uniform_int_distribution<>  idist(200, 800);
 
-    // idist(gen);// discard first call - always returns same result
-
     thread mary(Mary, ref(gen), ref(idist));
     thread joe(Joe, ref(gen), ref(idist));
 
