@@ -5,18 +5,15 @@
 #include <tuple>
 #include <cassert>
 #include <string>
+#include <utility>
 
 using namespace std;
-
-/* { process, (resource, resource) } */
-typedef pair<int, tuple<int, int>> request;
 
 vector<int> Available;
 vector<vector<int>> Max;
 vector<vector<int>> Allocation;
 vector<vector<int>> Need;
-
-vector<request> Requests;
+vector<vector<int>> Request;
 
 void readFile(string filename) {
     ifstream * filein = new ifstream(filename);
@@ -75,7 +72,6 @@ void readFile(string filename) {
         for (int j = 0; j < Available.size(); j++) {
             row->push_back(0);
         }
-        
         Need.push_back(*row);
     }
 
@@ -85,23 +81,39 @@ void readFile(string filename) {
         }
     }
     
-
+    /* initialize, populate Requests */
+    for (int i = 0; i < p; i++)
+    {
+        row = new vector<int>;
+        for (int j = 0; j < Available.size(); j++)
+        {
+            row->push_back(0);
+        }
+        Request.push_back(*row);
+        
+    }
+    
     /* get requests */
-    request * req;
     int id, r1, r2;
+
     for (line; getline(*filein, line); ) {
         linein = new istringstream(line);
         *linein >> id >> r1 >> r2;
-        req = new request{id, {r1, r2}};
-        Requests.push_back(*req);
+        Request[id - 1][0] = r1;
+        Request[id - 1][1] = r2;
     }
 
     filein->close();
 }
 
 void run();
-bool isSafe();
-void rrequest(); /* resource request */
+
+/**
+ * @brief resource request
+ * 
+ * @param next 
+ */
+void rrequest(auto &next);
 
 int main(int argc, char** argv)
 {
@@ -112,8 +124,26 @@ int main(int argc, char** argv)
 
     readFile(argv[1]);
 
-    // run();
+    run();
 
 
     return 0;
+}
+
+void run() {
+
+    vector<vector<int>>::iterator rit = Request.front();
+    do
+    {
+        rit = Request.front();
+        rrequest(request);
+        request++;
+    } while (!Request.empty());
+    
+};
+bool isSafe() {
+    return false;
+}
+void rrequest(auto &it) {
+
 }
