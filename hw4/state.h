@@ -20,8 +20,3 @@ class State {
         vector<vector<int>> Need;
         vector<vector<int>> Request;
 };
-
-vector<int> operator+= (vector<int> lhs, const vector<int>& rhs) {
-    :wa
-    
-}
