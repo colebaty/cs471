@@ -12,12 +12,11 @@ class State {
         void readFile(string filename);
 
         bool safe();
-        void request();
+        void request(vector<int>& Request);
 
     private:
         vector<int> Available;
         vector<vector<int>> Max;
         vector<vector<int>> Allocation;
         vector<vector<int>> Need;
-        vector<vector<int>> Request;
 };

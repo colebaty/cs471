@@ -95,3 +95,74 @@ void State::readFile(string filename) {
 
     filein->close();
 }
+
+bool State::safe() {
+    vector<bool> Finish(numProcesses, false);
+
+    /* find i such that both */
+    for (int i = 0; i < Finish.size(); i++)
+    {
+        if (!Finish[i] && Need[i] <= Work) {
+            Work[0] += Allocation[i][0];
+            Work[1] += Allocation[i][1];
+            Finish[i] = true;
+            continue;
+        }
+
+        for (auto it : Finish) {
+            /* if any Finish[i] != true */
+            if (!it) return false;
+        }
+
+    }
+
+    cout << "system is in safe state" << endl;
+    return true;
+}
+
+void State::request(vector<int>& Request) {
+    
+    for (int i = 0; i < Request.size(); i++)
+    {
+        if (Request[i] > Need[i]) {
+            cerr << "error: process[" << i+1 << "] has exceeded its maximum claim" << endl;
+            return;
+        }
+
+        if (Request[i] > Available) {
+            cout << "process[" << i+1 << "] must wait; resources not available" << endl;
+        }
+        else { /* pretend */
+            vector<int> tempAvailabl = Available;
+            tempAvailabl[0] -= Request[i][0];
+            tempAvailabl[1] -= Request[i][1];
+
+            vector<vector<int>> tempAllocation = Allocation;
+            tempAllocation[i][0] += Request[i][0];
+            tempAllocation[i][1] += Request[i][1];
+
+            vector<vector<int>> tempNeed = Need;
+            tempNeed[i][0] -= Request[i][0];
+            tempNeed[i][1] -= Request[i][1];
+
+            if (!isSafe(tempAvailabl, Need.size(), tempAllocation, tempNeed)) {
+                cout << "process[" << i+1 << "] must wait; restoring original state" << endl;
+            }
+            else {
+                cout << "request may proceed " << endl;
+
+                Available = tempAvailabl;
+
+                Allocation[i][0] = tempAllocation[i][0];
+                Allocation[i][1] = tempAllocation[i][1];
+
+                Need[i][0] = tempNeed[i][0];
+                Need[i][1] = tempNeed[i][1];
+
+                Request[i][0] = 0;
+                Request[i][1] = 0;
+            }
+        }
+
+    }
+}

@@ -1,2 +1,6 @@
 bankers
 data
+*.o
+*.dep
+*Test.cpp
+*.d
