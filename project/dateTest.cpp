@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <iomanip>
 #include <stdio.h>
+#include <time.h>
 
 const time_t YEAR_START = 1451606400;
 const time_t YEAR_END = 1483228799;
@@ -13,8 +14,6 @@ const time_t YEAR_END = 1483228799;
 enum month { JAN, FEB, MAR, APR, JUN, JUL, AUG, SEP, OCT, NOV, DEC };
 
 using namespace std;
-
-month getMonth(time_t &date);
 
 int main()
 {
@@ -30,7 +29,7 @@ int main()
 
     time_t date;
     char * date_s;
-    tm * t_m;
+    struct tm * t_m;
     for (size_t i = 0; i < 5; i++)
     {
         date = ddist(dategen);
@@ -44,8 +43,3 @@ int main()
 
     return 0;
 }
-
-// month getMonth(time_t &date)
-// {
-    
-// }
