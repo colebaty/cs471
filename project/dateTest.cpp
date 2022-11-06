@@ -24,13 +24,13 @@ int main()
     uniform_int_distribution<time_t> ddist(YEAR_START, YEAR_END);
 
     time_t date;
-    for (size_t i = 0; i < 10; i++)
+    for (size_t i = 0; i < 5; i++)
     {
         date = ddist(dategen);
         assert(YEAR_START <= date && date <= YEAR_END);
 
         cout << "random date " << i << ": " 
-             << put_time(localtime(&date), "%D\n") << flush << endl;
+             << put_time(gmtime(&date), "%D") << flush << endl;
     }
     
 
