@@ -31,7 +31,7 @@ int main()
     uniform_int_distribution<time_t> ddist(YEAR_START, YEAR_END);
     uniform_int_distribution<> storedist(0,p);
     uniform_int_distribution<> regdist(0,6);
-    uniform_real_distribution<long double> pricedist(50, 99999);
+    uniform_real_distribution<long double> pricedist(50, 99999); /* [$.50, $999.99] in cents */
 
     vector<record> entries;
 
@@ -60,7 +60,7 @@ int main()
 
     for (auto entry : entries) 
     {
-        cout.imbue(locale("en_US.utf-8"));
+        cout.imbue(locale("C"));
         cout << left 
              << setw(20) << put_time(localtime(&get<0>(entry)), "%x") << " "
              << setw(20) << get<1>(entry) 
