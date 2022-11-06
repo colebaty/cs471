@@ -60,10 +60,10 @@ int main()
 
     for (auto entry : entries) 
     {
-        cout.imbue(locale("C"));
+        cout.imbue(locale(""));
         cout << left 
-             << setw(20) << put_time(localtime(&get<0>(entry)), "%x") << " "
-             << setw(20) << get<1>(entry) 
+             << put_time(localtime(&get<0>(entry)), "%x") << setw(10) << ""
+             << setw(20) << get<1>(entry)
              << setw(20) << get<2>(entry)
              << setw(20) << showbase << put_money(get<3>(entry)) 
              << setw(20) << get<3>(entry) << endl;
