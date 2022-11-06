@@ -30,7 +30,7 @@ int main()
         assert(YEAR_START <= date && date <= YEAR_END);
 
         cout << "random date " << i << ": " 
-             << put_time(gmtime(&date), "%D") << flush << endl;
+             << put_time(localtime(&date), "%x") << flush << endl;
     }
     
 
