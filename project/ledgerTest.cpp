@@ -1,50 +1,73 @@
 #include <iostream>
-#include <chrono>
+#include <iomanip>
+#include <locale>
 #include <ctime>
-#include <thread>
-#include <semaphore>
+#include <random>
+#include <cassert>
+#include <algorithm>
+#include <stdio.h>
+#include <time.h>
+#include <utility>
 #include <tuple>
+
+const time_t YEAR_START = 1451606400;
+const time_t YEAR_END = 1483228799;
+
+enum month { JAN, FEB, MAR, APR, JUN, JUL, AUG, SEP, OCT, NOV, DEC };
 
 using namespace std;
 
 /* sales date, store ID, register, sale amt */
-typedef tuple<time_t, int, int, double> record;
-
-void producer() {
-    auto start = chrono::steady_clock::now();
-
-    cout << "i'm producing things; ";
-    this_thread::sleep_for(20ms);
-    
-    auto end = chrono::steady_clock::now();
-    chrono::duration<double> elapsed_time = end - start;
-    cout << "this took " << elapsed_time.count() << "s" << endl;
-}
-
-void consumer() {
-    auto start = chrono::steady_clock::now();
-
-    cout << "i'm producing things; ";
-    this_thread::sleep_for(25ms);
-
-    auto end = chrono::steady_clock::now();
-    chrono::duration<double> elapsed_time = end - start;
-    cout << "this took " << elapsed_time.count() << "s" << endl;
-}
+typedef tuple<time_t, int, int, long double> record;
 
 int main()
 {
-    auto start = chrono::steady_clock::now();
-    thread p(producer);
-    thread c(consumer);
+    cout << "======= generating random ledger entries ============" << endl;
+    random_device r;
 
-    p.join();
-    c.join();
+    int p = 5;
 
-    auto end = chrono::steady_clock::now();
+    default_random_engine gen(r());
+    uniform_int_distribution<time_t> ddist(YEAR_START, YEAR_END);
+    uniform_int_distribution<> storedist(0,p);
+    uniform_int_distribution<> regdist(0,6);
+    uniform_real_distribution<long double> pricedist(0.50, 999.99);
 
-    chrono::duration<double> elapsed_time = end - start;
-    cout << "total time was " << elapsed_time.count() << "s" << endl;
+    vector<record> entries;
+
+    time_t date;
+    double price;
+    int storeID, regID;
+
+    for (size_t i = 0; i < 5; i++)
+    {
+        date = ddist(gen);
+        assert(YEAR_START <= date && date <= YEAR_END);
+
+        storeID = storedist(gen);
+        regID = regdist(gen);
+        price = pricedist(gen);
+
+        entries.push_back( { date, storeID, regID, price} );
+    }
+
+    cout << "ledger contents: " << endl;
+    cout << left 
+         << setw(20) << "Date" 
+         << setw(20) << "Store" 
+         << setw(20) << "Register" 
+         << setw(20) << "Sale amt." << endl;
+
+    for (auto entry : entries) 
+    {
+        cout.imbue(locale("C"));
+        cout << left 
+             << setw(20) << put_time(localtime(&get<0>(entry)), "%x") << " "
+             << setw(20) << get<1>(entry) 
+             << setw(20) << get<2>(entry)
+             << setw(20) << showbase << put_money(get<3>(entry)) 
+             << setw(20) << get<3>(entry) << endl;
+    }
 
     return 0;
 }

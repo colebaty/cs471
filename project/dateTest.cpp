@@ -36,9 +36,13 @@ int main()
         t_m = localtime(&date);
         assert(YEAR_START <= date && date <= YEAR_END);
 
-        strftime(date_s, 100, "%x", localtime(&date));
+        // strftime(date_s, 100, "%x", localtime(&date));
 
-        cout << "random date " << i << ": " << date_s << flush << endl;
+        /* t_m->tm_mon is "months since january" aka zero-indexed */
+        cout << "random date " << i << ": " 
+             << put_time(localtime(&date), "%x") 
+             << " month: " << t_m->tm_mon + 1
+             << flush << endl;
     }
 
     return 0;
