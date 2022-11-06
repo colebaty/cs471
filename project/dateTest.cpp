@@ -6,12 +6,15 @@
 #include <algorithm>
 #include <iomanip>
 #include <stdio.h>
-#include <string.h>
 
 const time_t YEAR_START = 1451606400;
 const time_t YEAR_END = 1483228799;
 
+enum month { JAN, FEB, MAR, APR, JUN, JUL, AUG, SEP, OCT, NOV, DEC };
+
 using namespace std;
+
+month getMonth(time_t &date);
 
 int main()
 {
@@ -26,19 +29,23 @@ int main()
     uniform_int_distribution<time_t> ddist(YEAR_START, YEAR_END);
 
     time_t date;
-    char *date_s, *month_s, *month;
+    char * date_s;
+    tm * t_m;
     for (size_t i = 0; i < 5; i++)
     {
         date = ddist(dategen);
+        t_m = localtime(&date);
         assert(YEAR_START <= date && date <= YEAR_END);
 
         strftime(date_s, 100, "%x", localtime(&date));
-        strcpy(month_s, date_s);
-        month = strtok(month_s, "/");
 
-        cout << "random date " << i << ": " << date_s << flush 
-             << " month: " << month << endl;
+        cout << "random date " << i << ": " << date_s << flush << endl;
     }
 
     return 0;
 }
+
+// month getMonth(time_t &date)
+// {
+    
+// }
