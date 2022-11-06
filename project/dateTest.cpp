@@ -5,9 +5,11 @@
 #include <cassert>
 #include <algorithm>
 #include <iomanip>
+#include <stdio.h>
+#include <string.h>
 
-#define YEAR_START 1451606400
-#define YEAR_END 1483228799
+const time_t YEAR_START = 1451606400;
+const time_t YEAR_END = 1483228799;
 
 using namespace std;
 
@@ -24,15 +26,19 @@ int main()
     uniform_int_distribution<time_t> ddist(YEAR_START, YEAR_END);
 
     time_t date;
+    char *date_s, *month_s, *month;
     for (size_t i = 0; i < 5; i++)
     {
         date = ddist(dategen);
         assert(YEAR_START <= date && date <= YEAR_END);
 
-        cout << "random date " << i << ": " 
-             << put_time(localtime(&date), "%x") << flush << endl;
+        strftime(date_s, 100, "%x", localtime(&date));
+        strcpy(month_s, date_s);
+        month = strtok(month_s, "/");
+
+        cout << "random date " << i << ": " << date_s << flush 
+             << " month: " << month << endl;
     }
-    
 
     return 0;
 }
