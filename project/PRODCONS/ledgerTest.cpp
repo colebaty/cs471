@@ -9,6 +9,8 @@
 #include <time.h>
 #include <utility>
 #include <tuple>
+#include <thread>
+#include <semaphore>
 
 const time_t YEAR_START = 1451606400;
 const time_t YEAR_END = 1483228799;
@@ -16,6 +18,8 @@ const time_t YEAR_END = 1483228799;
 enum month { JAN, FEB, MAR, APR, JUN, JUL, AUG, SEP, OCT, NOV, DEC };
 
 using namespace std;
+
+binary_semaphore account{0};
 
 /* sales date, store ID, register, sale amt */
 typedef tuple<time_t, int, int, long double> record;
@@ -60,7 +64,7 @@ int main()
 
     for (auto entry : entries) 
     {
-        cout.imbue(locale("C"));
+        cout.imbue(locale(""));
         cout << left 
              << put_time(localtime(&get<0>(entry)), "%x") << setw(12) << ""
              << setw(20) << get<1>(entry)
