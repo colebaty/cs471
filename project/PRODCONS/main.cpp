@@ -30,13 +30,32 @@ typedef tuple<time_t, int, int, long double> record;
 binary_semaphore ledger_sem{0};
 vector<record> ledger;
 
+/**
+ * @brief producer thread
+ * 
+ * @param id 
+ * @param gen 
+ * @param ddist 
+ * @param storedist 
+ * @param regdist 
+ * @param pricedist 
+ * @param sleepdist 
+ */
 void producer(
-    int id, default_random_engine& gen, uniform_int_distribution<time_t>& ddist,
-    uniform_int_distribution<>& storedist, uniform_int_distribution<>& regdist,
-    uniform_real_distribution<long double>& pricedist);
+    int id, 
+    default_random_engine& gen, 
+    uniform_int_distribution<time_t>& ddist,
+    uniform_int_distribution<>& storedist, 
+    uniform_int_distribution<>& regdist,
+    uniform_real_distribution<long double>& pricedist,
+    uniform_int_distribution<>& sleepdist);
+
+void print();
 
 int main(int argc, char **argv)
 {
+    auto start = chrono::steady_clock::now();
+
     int p, c;
     int b = 1000; /* max buffer size */
     if (argc == 3)
@@ -59,11 +78,20 @@ int main(int argc, char **argv)
     uniform_int_distribution<> storedist(0,p);
     uniform_int_distribution<> regdist(0,6);
     uniform_real_distribution<long double> pricedist(50, 99999); /* [$.50, $999.99] in cents */
+    uniform_int_distribution<> sleepdist(5,40);
 
     thread producers[p];
     for (size_t i = 0; i < p; i++)
     {
-        producers[i] = thread(producer, i, ref(gen), ref(ddist), ref(storedist), ref(regdist), ref(pricedist));
+        producers[i] = thread(
+            producer, 
+            i, 
+            ref(gen), 
+            ref(ddist), 
+            ref(storedist), 
+            ref(regdist), 
+            ref(pricedist),
+            ref(sleepdist));
     }
 
     ledger_sem.release();
@@ -72,9 +100,12 @@ int main(int argc, char **argv)
     {
         producers[i].join();
     }
-
-    cout << "ledger size: " << ledger.size() << endl;
     
+    print();
+
+    auto end = chrono::steady_clock::now();
+    chrono::duration<double> elapsed_time = end - start;
+    cout << "total elapsed time: " << elapsed_time.count() << "s\n";
     return 0;
 }
 
@@ -83,9 +114,9 @@ void producer(int id,
     uniform_int_distribution<time_t>& ddist,
     uniform_int_distribution<>& storedist,
     uniform_int_distribution<>& regdist,
-    uniform_real_distribution<long double>& pricedist) 
+    uniform_real_distribution<long double>& pricedist,
+    uniform_int_distribution<>& sleepdist)
 {
-
     time_t date;
     long double price;
     int storeID, regID;
@@ -103,11 +134,16 @@ void producer(int id,
         ledger_sem.acquire();
 
         /* critical section */
-        ledger.push_back( { date, storeID, regID, price} );
+        ledger.push_back( { date, storeID, regID, price } );
 
         ledger_sem.release();
         /* remainder section */
+        this_thread::sleep_for(chrono::milliseconds{sleepdist(gen)});
     }
+}
+
+void print()
+{
 
     cout << "ledger contents: " << endl;
     cout << left 
@@ -116,7 +152,6 @@ void producer(int id,
          << setw(20) << "Register" 
          << setw(20) << "Sale amt." << endl;
 
-    ledger_sem.acquire();
     for (auto entry : ledger) 
     {
         cout.imbue(locale(""));
@@ -124,9 +159,8 @@ void producer(int id,
              << put_time(localtime(&get<0>(entry)), "%x") << setw(12) << ""
              << setw(20) << get<1>(entry)
              << setw(20) << get<2>(entry)
-             << setw(20) << showbase << put_money(get<3>(entry)) 
-             << setw(20) << get<3>(entry) << endl;
+             << setw(20) << showbase << put_money(get<3>(entry)) << endl;
+            //  << setw(20) << get<3>(entry) << endl;
     }
-    ledger_sem.release();
-
+    cout << "ledger size: " << ledger.size() << endl;
 }
