@@ -27,7 +27,7 @@ using namespace std;
 typedef tuple<time_t, int, int, long double> record;
 
 /* shared variables */
-binary_semaphore ledger_sem{0};
+binary_semaphore ledger_sem{0};/* starts in "acquired" state */
 vector<record> ledger;
 
 /**

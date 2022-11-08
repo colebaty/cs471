@@ -42,6 +42,13 @@ void print();
  */
 void print(const record & r);
 
+/**
+ * @brief print the maps used to store montly, store-wide, etc. data
+ * 
+ * @param swts 
+ * @param mwts 
+ * @param all 
+ */
 void print(const map<int, long double>& swts, const map<string, long double>& mwts, const long double& all);
 
 int main(int argc, char **argv)
