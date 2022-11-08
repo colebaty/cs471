@@ -44,12 +44,20 @@ void print(const record & r);
 
 void print(const map<int, long double>& swts, const map<string, long double>& mwts, const long double& all);
 
-int main()
+int main(int argc, char **argv)
 {
+    int p;
+    if (argc == 2)
+    {
+        p = atoi(argv[1]);
+    }
+    else
+    {
+        p = 10;
+    }
     cout << "======= generating random entries in ledger ============" << endl;
     random_device r;
 
-    int p = 10;
 
     default_random_engine gen(r());
     uniform_int_distribution<time_t> ddist(YEAR_START, YEAR_END);
