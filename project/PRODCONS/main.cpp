@@ -75,8 +75,8 @@ int main(int argc, char **argv)
     random_device r;
     default_random_engine gen(r());
     uniform_int_distribution<time_t> ddist(YEAR_START, YEAR_END);
-    uniform_int_distribution<> storedist(0,p);
-    uniform_int_distribution<> regdist(0,6);
+    uniform_int_distribution<> storedist(1,p);
+    uniform_int_distribution<> regdist(1,6);
     uniform_real_distribution<long double> pricedist(50, 99999); /* [$.50, $999.99] in cents */
     uniform_int_distribution<> sleepdist(5,40);
 
@@ -142,9 +142,12 @@ void producer(int id,
     }
 }
 
+/**
+ * @brief print the ledger
+ * 
+ */
 void print()
 {
-
     cout << "ledger contents: " << endl;
     cout << left 
          << setw(20) << "Date" 
@@ -152,9 +155,9 @@ void print()
          << setw(20) << "Register" 
          << setw(20) << "Sale amt." << endl;
 
+    cout.imbue(locale(""));
     for (auto entry : ledger) 
     {
-        cout.imbue(locale(""));
         cout << left 
              << put_time(localtime(&get<0>(entry)), "%x") << setw(12) << ""
              << setw(20) << get<1>(entry)
