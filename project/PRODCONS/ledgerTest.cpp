@@ -54,12 +54,10 @@ void print(const map<int, long double>& swts, const map<string, long double>& mw
 int main(int argc, char **argv)
 {
     int p;
-    if (argc == 2)
-    {
+    if (argc == 2) {
         p = atoi(argv[1]);
     }
-    else
-    {
+    else {
         p = 10;
     }
     cout << "======= generating random entries in ledger ============" << endl;
