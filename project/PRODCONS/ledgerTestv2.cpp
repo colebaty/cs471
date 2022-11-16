@@ -25,14 +25,23 @@ using namespace std;
 /* sales date, store ID, register, sale amt */
 typedef tuple<time_t, int, int, long double> record;
 
-binary_semaphore account{0};
-vector<record> ledger;
+vector<record> master_ledger;
 record *buffer;
+int p, c, b;
 int numProduced = 0, numRead = 0;
+
+void producer(
+    int id, 
+    default_random_engine& gen, 
+    uniform_int_distribution<time_t>& ddist,
+    uniform_int_distribution<>& storedist, 
+    uniform_int_distribution<>& regdist,
+    uniform_real_distribution<long double>& pricedist,
+    uniform_int_distribution<>& sleepdist,
+    binary_semaphore &mutex);
 
 int main(int argc, char **argv)
 {
-    int p, b;
     if (argc == 3) {
         p = atoi(argv[1]);
         b = atoi(argv[2]);
@@ -42,22 +51,58 @@ int main(int argc, char **argv)
         b = 3;
     }
 
+    cout << "======= generating random entries in ledger ============" << endl;
+    binary_semaphore mutex{0};/* starts in "acquired" state */
+
     buffer = new record[b];
 
-    cout << "======= generating random entries in ledger ============" << endl;
     random_device r;
-
     default_random_engine gen(r());
     uniform_int_distribution<time_t> ddist(YEAR_START, YEAR_END);
     uniform_int_distribution<> storedist(1,p);
     uniform_int_distribution<> regdist(1,6);
     uniform_real_distribution<long double> pricedist(50, 99999); /* [$.50, $999.99] in cents */
+    uniform_int_distribution<> sleepdist(5,40);
 
-    time_t date;
-    double price;
-    int storeID, regID;
+    thread producers[p];
+    for (size_t i = 0; i < p; i++)
+    {
+        producers[i] = thread(
+            producer, 
+            i, 
+            ref(gen), 
+            ref(ddist), 
+            ref(storedist), 
+            ref(regdist), 
+            ref(pricedist),
+            ref(sleepdist),
+            ref(mutex));
+    }
+
+    mutex.release();
 
     for (size_t i = 0; i < p; i++)
+    {
+        producers[i].join();
+    }
+
+    return 0;
+}
+
+void producer(int id, 
+    default_random_engine& gen, 
+    uniform_int_distribution<time_t>& ddist,
+    uniform_int_distribution<>& storedist,
+    uniform_int_distribution<>& regdist,
+    uniform_real_distribution<long double>& pricedist,
+    uniform_int_distribution<>& sleepdist,
+    binary_semaphore& mutex)
+{
+    time_t date;
+    int storeID, regID;
+    long double price;
+
+    while(numProduced < 1000)
     {
         date = ddist(gen);
         assert(YEAR_START <= date && date <= YEAR_END);
@@ -66,9 +111,16 @@ int main(int argc, char **argv)
         regID = regdist(gen);
         price = pricedist(gen);
 
-        ledger.push_back( { date, storeID, regID, price} );
-        buffer[i % b] = record({ date, storeID, regID, price });
-    }
+        /* entry section */
+        mutex.acquire();
 
-    return 0;
+        /* critical section */
+        buffer[numProduced % b] = { date, storeID, regID, price };
+        numProduced++;
+
+        mutex.release();
+
+        /* remainder section */
+        this_thread::sleep_for(chrono::milliseconds{sleepdist(gen)});
+    }
 }
