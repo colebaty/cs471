@@ -52,7 +52,7 @@ int main(int argc, char **argv)
     }
 
     cout << "======= generating random entries in ledger ============" << endl;
-    binary_semaphore mutex{0};/* starts in "acquired" state */
+    binary_semaphore buff_mutex{0};/* starts in "acquired" state */
 
     buffer = new record[b];
 
@@ -76,10 +76,10 @@ int main(int argc, char **argv)
             ref(regdist), 
             ref(pricedist),
             ref(sleepdist),
-            ref(mutex));
+            ref(buff_mutex));
     }
 
-    mutex.release();
+    buff_mutex.release();
 
     for (size_t i = 0; i < p; i++)
     {
@@ -96,7 +96,7 @@ void producer(int id,
     uniform_int_distribution<>& regdist,
     uniform_real_distribution<long double>& pricedist,
     uniform_int_distribution<>& sleepdist,
-    binary_semaphore& mutex)
+    binary_semaphore& buff_mutex)
 {
     time_t date;
     int storeID, regID;
@@ -112,13 +112,13 @@ void producer(int id,
         price = pricedist(gen);
 
         /* entry section */
-        mutex.acquire();
+        buff_mutex.acquire();
 
         /* critical section */
         buffer[numProduced % b] = { date, storeID, regID, price };
         numProduced++;
 
-        mutex.release();
+        buff_mutex.release();
 
         /* remainder section */
         this_thread::sleep_for(chrono::milliseconds{sleepdist(gen)});
