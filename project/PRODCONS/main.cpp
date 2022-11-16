@@ -27,6 +27,7 @@ using namespace std;
 typedef tuple<time_t, int, int, long double> record;
 
 /* shared variables */
+int numProduced = 0, numRead = 0;
 binary_semaphore ledger_sem{0};/* starts in "acquired" state */
 vector<record> ledger;
 
@@ -121,7 +122,7 @@ void producer(int id,
     long double price;
     int storeID, regID;
 
-    while(ledger.size() < 1000)
+    while(numProduced < 1000)
     {
         date = ddist(gen);
         assert(YEAR_START <= date && date <= YEAR_END);
@@ -135,8 +136,10 @@ void producer(int id,
 
         /* critical section */
         ledger.push_back( { date, storeID, regID, price } );
+        numProduced++;
 
         ledger_sem.release();
+
         /* remainder section */
         this_thread::sleep_for(chrono::milliseconds{sleepdist(gen)});
     }
