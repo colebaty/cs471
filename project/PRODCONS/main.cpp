@@ -86,10 +86,9 @@ int main(int argc, char **argv)
     {
         producers[i] = thread(
             producer, 
-            i, 
+            storedist(gen), 
             ref(gen), 
             ref(ddist), 
-            ref(storedist), 
             ref(regdist), 
             ref(pricedist),
             ref(sleepdist));
@@ -113,7 +112,6 @@ int main(int argc, char **argv)
 void producer(int id, 
     default_random_engine& gen, 
     uniform_int_distribution<time_t>& ddist,
-    uniform_int_distribution<>& storedist,
     uniform_int_distribution<>& regdist,
     uniform_real_distribution<long double>& pricedist,
     uniform_int_distribution<>& sleepdist)
@@ -127,7 +125,6 @@ void producer(int id,
         date = ddist(gen);
         assert(YEAR_START <= date && date <= YEAR_END);
 
-        storeID = storedist(gen);
         regID = regdist(gen);
         price = pricedist(gen);
 
@@ -135,7 +132,7 @@ void producer(int id,
         ledger_sem.acquire();
 
         /* critical section */
-        ledger.push_back( { date, storeID, regID, price } );
+        ledger.push_back( { date, id, regID, price } );
         numProduced++;
 
         ledger_sem.release();
