@@ -46,7 +46,6 @@ void producer(
     int id, 
     default_random_engine& gen, 
     uniform_int_distribution<time_t>& ddist,
-    uniform_int_distribution<>& storedist, 
     uniform_int_distribution<>& regdist,
     uniform_real_distribution<long double>& pricedist,
     uniform_int_distribution<>& sleepdist);
