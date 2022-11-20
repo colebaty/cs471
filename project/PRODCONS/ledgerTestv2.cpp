@@ -28,11 +28,12 @@ typedef tuple<time_t, int, int, long double> record;
 sem_t buff_full, buff_empty, buff_mutex;
 
 vector<record> master_ledger;
-record *buffer;
+// record *buffer;
+int * buffer;
 int p, c, b, index = 0;
 int numProduced = 0, numRead = 0;
 
-default_random_engine gen;
+default_random_engine * gen;
 
 /**
  * @brief producer thread
@@ -60,14 +61,21 @@ int main(int argc, char **argv)
 
     // cout << "======= generating random entries in ledger ============" << endl;
 
+    // buffer = new record[b];
+    buffer = new int[b];
+    for (size_t i = 0; i < b; i++) buffer[i] = -1;
+    
     cout << "========= info =================" << endl;
     cout << "b: " << b << endl;
+    cout << "buffer: ";
+    for (int i = 0; i < b; i++) cout << buffer[i] << " ";
+    cout << endl;
+
     cout << "================================" << endl;
 
-    buffer = new record[b];
 
     random_device r;
-    default_random_engine gen(r());
+    gen = new default_random_engine(r());
 
     sem_init(&buff_empty, 0, b);
     sem_init(&buff_full, 0, 0);
@@ -76,12 +84,33 @@ int main(int argc, char **argv)
     pthread_attr_t attr;
     pthread_attr_init(&attr);
 
-    pthread_t prod;
+    // pthread_t prod1;
+    // int rc, id;
+    // id = 1;
+    // rc = pthread_create(&prod1, &attr, producer, (void *) &id);
+    // if (rc) {
+    //     fprintf(stderr, "ERROR: return code from pthread_create is %d\n", rc);
+    //     exit(1);
+    // }
+
+    // usleep(1000);
+
+    // pthread_t prod2;
+    // id = 2;
+    // rc = pthread_create(&prod2, &attr, producer, (void *) &id);
+    // if (rc) {
+    //     fprintf(stderr, "ERROR: return code from pthread_create is %d\n", rc);
+    //     exit(1);
+    // }
+
+    pthread_t producers[p];
     int rc;
-    rc = pthread_create(&prod, &attr, producer, NULL);
-    if (rc) {
-        fprintf(stderr, "ERROR: return code from pthread_create is %d\n", rc);
-        exit(1);
+    for (int i = 0; i < p; i++) {
+        rc = pthread_create(&producers[i], &attr, producer, (void *) i);
+        if (rc) {
+            fprintf(stderr, "ERROR: return code from pthread_create is %d\n", rc);
+            exit(1);
+        }
     }
 
     pthread_t cons;
@@ -93,50 +122,64 @@ int main(int argc, char **argv)
 
     // sem_post(&buff_empty);
 
-    pthread_join(prod, NULL);
+    // pthread_join(prod1, NULL);
+    // pthread_join(prod2, NULL);
+
+    for (int i = 0; i < p; i++) pthread_join(producers[i], NULL);
     pthread_join(cons, NULL);
+
+    cout << "=====================" << endl;
+    cout << "numProduced: " << numProduced << endl
+         << "numRead: " << numRead << endl;
 
     pthread_exit(NULL);
 
-    // return 0;
+    return 0;
 }
 
 void *producer(void * arg)
 {
     uniform_int_distribution<> sleepdist(5,40);
 
+    int id = (int) (int*) arg;
+
     int sleepdur;
-    while(numProduced < MAX_RECORDS)
+    do
     {
         /* entry section */
         sem_wait(&buff_empty);
-        cout << "producer acquired buff_empty" << endl;
+        cout << "producer " << id << " acquired buff_empty" << endl;
         // pthread_mutex_lock(&buff_mutex);
         sem_wait(&buff_mutex);
-        cout << "producer acquired mutex lock" << endl;
+        cout << "producer " << id << " acquired mutex lock" << endl;
 
-        // /* critical section */
-        // buffer[index % b] = newRecord(gen);
-        // cout << "producer: ";
-        // print(buffer[index % b]);
-        // index++;
-        cout << "producer: put new thing in buffer " << numProduced % b << endl;
-        cout << "producer: " << ++numProduced << " new things made so far " << endl;
+        /* critical section */
+        if (numProduced < MAX_RECORDS) {
+
+            cout << "producer " << id << ": put new thing "
+                << numProduced << " in buffer " << numProduced % b << endl;
+            buffer[numProduced % b] = numProduced;
+            numProduced++;
+
+            cout << "producer: buffer: ";
+            for (int i = 0; i < b; i++) cout << buffer[i] << " ";
+            cout << endl;
 
 
-        sleepdur = sleepdist(gen) * 1000;
-        cout << "producer sleeping for " << sleepdur / 1000 << "ms" << endl;
-        usleep(sleepdur);
+            sleepdur = sleepdist(*gen) * 1000;
+            cout << "producer " << id << " sleeping for " << sleepdur / 1000 << "ms" << endl;
+            usleep(sleepdur);
 
+        }
         // pthread_mutex_unlock(&buff_mutex);
         sem_post(&buff_mutex);
-        cout << "producer released mutex lock" << endl;
+        cout << "producer " << id << " released mutex lock" << endl;
         sem_post(&buff_full);
-        cout << "producer released buff_full" << endl;
+        cout << "producer " << id << " released buff_full" << endl;
 
         /* remainder section */
         // this_thread::sleep_for(chrono::milliseconds{sleepdist(gen)});
-    }
+    } while(numProduced < MAX_RECORDS);
 
     pthread_exit(NULL);
 }
@@ -147,7 +190,8 @@ void *consumer(void * arg) {
     vector<record> thread_ledger;
     int sleepdur;
 
-    while (numRead < MAX_RECORDS) 
+    // while (numRead < MAX_RECORDS) 
+    do
     {
         sem_wait(&buff_full);
         cout << "consumer acquired buff_full" << endl;
@@ -160,10 +204,15 @@ void *consumer(void * arg) {
         // print(buffer[index % b]);
         // buffer[index % b] = { 0, 0, 0, 0 };
         // index--;
-        cout << "consumer: read thing from buffer " << numRead % b << endl;
-        cout << "consumer: read " << ++numRead <<  " things so far" << endl;
+        cout << "consumer: read thing " << numRead << " from buffer " << numRead % b << endl;
+        buffer[numRead % b] = -1;
+        cout << "consumer: buffer: ";
+        for (int i = 0; i < b; i++) cout << buffer[i] << " ";
+        cout << endl;
 
-        sleepdur = sleepdist(gen) * 1000;
+        numRead++;
+
+        sleepdur = sleepdist(*gen) * 1000;
         cout << "consumer sleeping for " << sleepdur / 1000 << "ms" << endl;
         usleep(sleepdur);
 
@@ -173,7 +222,7 @@ void *consumer(void * arg) {
         cout << "consumer released buff_mutex" << endl;
         sem_post(&buff_empty);
         cout << "consumer released buff_full" << endl;
-    }
+    } while (numRead < numProduced);
 
     pthread_exit(NULL);
 }
