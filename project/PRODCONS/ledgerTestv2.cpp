@@ -113,11 +113,20 @@ int main(int argc, char **argv)
         }
     }
 
-    pthread_t cons;
-    rc = pthread_create(&cons, &attr, consumer, NULL);
-    if (rc) {
-        fprintf(stderr, "ERROR: return code from pthread_create is %d\n", rc);
-        exit(1);
+    // pthread_t cons;
+    // rc = pthread_create(&cons, &attr, consumer, NULL);
+    // if (rc) {
+    //     fprintf(stderr, "ERROR: return code from pthread_create is %d\n", rc);
+    //     exit(1);
+    // }
+
+    pthread_t consumers[c];
+    for (int i = 0; i < c; i++) {
+        rc = pthread_create(&consumers[i], &attr, consumer, (void *) i);
+        if (rc) {
+            fprintf(stderr, "ERROR: return code from pthread_create is %d\n", rc);
+            exit(1);
+        }
     }
 
     // sem_post(&buff_empty);
@@ -126,7 +135,7 @@ int main(int argc, char **argv)
     // pthread_join(prod2, NULL);
 
     for (int i = 0; i < p; i++) pthread_join(producers[i], NULL);
-    pthread_join(cons, NULL);
+    for (int i = 0; i < c; i++) pthread_join(consumers[i], NULL);
 
     cout << "=====================" << endl;
     cout << "numProduced: " << numProduced << endl
@@ -187,6 +196,8 @@ void *producer(void * arg)
 void *consumer(void * arg) {
     uniform_int_distribution<> sleepdist(5,40);
 
+    int id = (int) (int*) arg;
+
     vector<record> thread_ledger;
     int sleepdur;
 
@@ -194,9 +205,9 @@ void *consumer(void * arg) {
     do
     {
         sem_wait(&buff_full);
-        cout << "consumer acquired buff_full" << endl;
+        cout << "consumer " << id << " acquired buff_full" << endl;
         sem_wait(&buff_mutex);
-        cout << "consumer acquired buff_mutex" << endl;
+        cout << "consumer " << id << " acquired buff_mutex" << endl;
         // pthread_mutex_lock(&buff_mutex);
 
         // thread_ledger.push_back(buffer[numRead % b]);
@@ -204,24 +215,24 @@ void *consumer(void * arg) {
         // print(buffer[index % b]);
         // buffer[index % b] = { 0, 0, 0, 0 };
         // index--;
-        cout << "consumer: read thing " << numRead << " from buffer " << numRead % b << endl;
+        cout << "consumer" << id << ": read thing " << numRead << " from buffer " << numRead % b << endl;
         buffer[numRead % b] = -1;
-        cout << "consumer: buffer: ";
+        cout << "consumer" << id << ": buffer: ";
         for (int i = 0; i < b; i++) cout << buffer[i] << " ";
         cout << endl;
 
         numRead++;
 
         sleepdur = sleepdist(*gen) * 1000;
-        cout << "consumer sleeping for " << sleepdur / 1000 << "ms" << endl;
+        cout << "consumer" << id << " sleeping for " << sleepdur / 1000 << "ms" << endl;
         usleep(sleepdur);
 
 
         // pthread_mutex_unlock(&buff_mutex);
         sem_post(&buff_mutex);
-        cout << "consumer released buff_mutex" << endl;
+        cout << "consumer " << id << "released buff_mutex" << endl;
         sem_post(&buff_empty);
-        cout << "consumer released buff_full" << endl;
+        cout << "consumer " << id << "released buff_full" << endl;
     } while (numRead < numProduced);
 
     pthread_exit(NULL);
