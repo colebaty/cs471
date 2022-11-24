@@ -14,7 +14,7 @@
 #include <semaphore.h>
 #include <unistd.h>
 
-#define MAX_RECORDS 10
+#define MAX_RECORDS 1000
 
 const time_t YEAR_START = 1451606400;
 const time_t YEAR_END = 1483228799;
