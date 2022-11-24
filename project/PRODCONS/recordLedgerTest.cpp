@@ -14,7 +14,9 @@
 #include <semaphore.h>
 #include <unistd.h>
 
-#define MAX_RECORDS 1000
+#define MAX_RECORDS 10
+// #define MAX_RECORDS 100
+// #define MAX_RECORDS 1000
 
 const time_t YEAR_START = 1451606400;
 const time_t YEAR_END = 1483228799;
@@ -25,18 +27,24 @@ using namespace std;
 
 /* sales date, store ID, register, sale amt */
 typedef tuple<time_t, int, int, long double> record;
+record EMPTY = { 0, 0, 0, 0 };
+record *rptr;
 
 /* shared variables */
 sem_t buff_full, buff_empty, buff_mutex;
 pthread_mutex_t mutex;
 
 vector<record> master_ledger;
-// record *buffer;
-int * buffer;
+record *buffer;
+// int * buffer;
 int p, c, b, index = 0;
 int numProduced = 0, numRead = 0;
 
 default_random_engine * gen;
+uniform_int_distribution<time_t> ddist;
+uniform_int_distribution<> storedist;
+uniform_int_distribution<> regdist;
+uniform_real_distribution<long double> pricedist;
 
 #ifdef DEBUG
 int *prodsemfullval, *prodsememptyval;
@@ -51,7 +59,7 @@ int *conssemfullval, *conssememptyval;
  */
 void *producer(void * arg);
 void *consumer(void * arg);
-record newRecord(default_random_engine& gen);
+record newRecord();
 void print(record r);
 
 int main(int argc, char **argv)
@@ -69,27 +77,34 @@ int main(int argc, char **argv)
 
     // cout << "======= generating random entries in ledger ============" << endl;
 
-    // buffer = new record[b];
+    buffer = new record[b];
     #ifdef DEBUG
     prodsemfullval = new int[b];
     prodsememptyval = new int[b];
     conssemfullval = new int[b];
     conssememptyval = new int[b];
     #endif
-    buffer = new int[b];
-    for (size_t i = 0; i < b; i++) buffer[i] = -1;
+    
+    for (size_t i = 0; i < b; i++) buffer[i] = { 0, 0, 0, 0 };
     
     cout << "========= info =================" << endl;
     cout << "b: " << b << endl;
-    cout << "buffer: ";
-    for (int i = 0; i < b; i++) cout << buffer[i] << " ";
-    cout << endl;
+    cout << "buffer contents: " << endl
+         << "======================================" << endl;
+        for (int i = 0; i < b; i++) {
+            print(buffer[i]);
+        }
+    cout << "======================================" << endl;
 
     cout << "================================" << endl;
 
 
     random_device r;
     gen = new default_random_engine(r());
+    ddist = uniform_int_distribution<time_t>(YEAR_START, YEAR_END);
+    storedist = uniform_int_distribution<>(1,p);
+    regdist = uniform_int_distribution<>(1,6);
+    pricedist = uniform_real_distribution<long double>(50, 99999); /* [$.50, $999.99] in cents */
 
     sem_init(&buff_empty, 0, b);
     sem_init(&buff_full, 0, 0);
@@ -163,13 +178,16 @@ int main(int argc, char **argv)
     return 0;
 }
 
-void *producer(void * arg)
-{
+void *producer(void * arg) {
     uniform_int_distribution<> sleepdist(5,40);
 
     int id = (int) (int*) arg;
-
     int sleepdur;
+
+    time_t date;
+    int storeID, regID;
+    long double price;
+
     do
     {
         /* entry section */
@@ -191,18 +209,29 @@ void *producer(void * arg)
         cout << "producer " << id << " requesting mutex lock" << endl;
         #endif
         pthread_mutex_lock(&mutex);
-        // sem_wait(&buff_mutex);
         #ifdef DEBUG
         cout << "producer " << id << " acquired mutex lock" << endl;
         #endif
 
         /* critical section */
         if (numProduced < MAX_RECORDS) {
+            // *rptr = newRecord();
 
-            cout << "producer " << id << ": put new thing "
+            cout << "producer " << id << ": put new record "
                         << numProduced << " in buffer " << numProduced % b << endl;
-            buffer[numProduced % b] = numProduced;
+            date = ddist(*gen);
+            storeID = storedist(*gen);
+            regID = regdist(*gen);
+            price = pricedist(*gen);
+            buffer[numProduced % b] = { date, storeID, regID, price };
             numProduced++;
+
+            cout << "producer " << id << ": buffer contents: " << endl
+                << "======================================" << endl;
+            for (int i = 0; i < b; i++) {
+                print(buffer[i]);
+            }
+            cout << "======================================" << endl;
 
             #ifdef DEBUG
             sem_getvalue(&buff_full, &prodsemfullval[id]);
@@ -233,9 +262,6 @@ void *producer(void * arg)
             #endif
         }
         
-        cout << "producer " << id << ": buffer: ";
-        for (int i = 0; i < b; i++) cout << buffer[i] << " ";
-        cout << endl;
 
         pthread_mutex_unlock(&mutex);
 
@@ -291,7 +317,6 @@ void *consumer(void * arg) {
         #endif
 
         pthread_mutex_lock(&mutex);
-        // sem_wait(&buff_mutex);
 
         #ifdef DEBUG
         cout << "consumer " << id << " acquired mutex lock" << endl;
@@ -304,17 +329,20 @@ void *consumer(void * arg) {
         // index--;
         if (numRead < MAX_RECORDS) {
             cout << "consumer " << id << ": read thing " << numRead << " from buffer " << numRead % b << endl;
-            buffer[numRead % b] = -1;
+            rptr = &buffer[numRead % b];
+            buffer[numRead % b] = EMPTY;
+            thread_ledger.push_back(*rptr);
 
             numRead++;
         }
 
-        cout << "consumer " << id << ": buffer: ";
-        for (int i = 0; i < b; i++) cout << buffer[i] << " ";
-        cout << endl;
+        cout << "consumer " << id << ": buffer contents: " << endl
+             << "======================================" << endl;
+        for (int i = 0; i < b; i++) {
+            print(buffer[i]);
+        }
+        cout << "======================================" << endl;
 
-        // pthread_mutex_unlock(&buff_mutex);
-        // sem_post(&buff_mutex);
         pthread_mutex_unlock(&mutex);
 
         #ifdef DEBUG
@@ -348,26 +376,26 @@ void *consumer(void * arg) {
     pthread_exit(NULL);
 }
 
-record newRecord(default_random_engine& gen)
-{
-        uniform_int_distribution<time_t> ddist(YEAR_START, YEAR_END);
-        uniform_int_distribution<> storedist(1,p);
-        uniform_int_distribution<> regdist(1,6);
-        uniform_real_distribution<long double> pricedist(50, 99999); /* [$.50, $999.99] in cents */
+// record newRecord() {
+//         uniform_int_distribution<time_t> ddist(YEAR_START, YEAR_END);
+//         uniform_int_distribution<> storedist(1,p);
+//         uniform_int_distribution<> regdist(1,6);
+//         uniform_real_distribution<long double> pricedist(50, 99999); /* [$.50, $999.99] in cents */
 
-        time_t date;
-        int storeID, regID;
-        long double price;
+//         time_t date;
+//         int storeID, regID;
+//         long double price;
 
-        date = ddist(gen);
-        assert(YEAR_START <= date && date <= YEAR_END);
+//         date = ddist(*gen);
+//         assert(YEAR_START <= date && date <= YEAR_END);
 
-        storeID = storedist(gen);
-        regID = regdist(gen);
-        price = pricedist(gen);
+//         storeID = storedist(*gen);
+//         regID = regdist(*gen);
+//         price = pricedist(*gen);
 
-       return { date, storeID, regID, price };
-}
+
+//         return record({date, storeID, regID, price});
+// }
 
 void print(record r) {
     cout.imbue((locale("")));
