@@ -1,3 +1,5 @@
+// #define DEBUG
+
 #include <iostream>
 #include <iomanip>
 #include <locale>
@@ -12,7 +14,7 @@
 #include <semaphore.h>
 #include <unistd.h>
 
-#define MAX_RECORDS 5
+#define MAX_RECORDS 10
 
 const time_t YEAR_START = 1451606400;
 const time_t YEAR_END = 1483228799;
@@ -26,6 +28,7 @@ typedef tuple<time_t, int, int, long double> record;
 
 /* shared variables */
 sem_t buff_full, buff_empty, buff_mutex;
+pthread_mutex_t mutex;
 
 vector<record> master_ledger;
 // record *buffer;
@@ -34,6 +37,11 @@ int p, c, b, index = 0;
 int numProduced = 0, numRead = 0;
 
 default_random_engine * gen;
+
+#ifdef DEBUG
+int *prodsemfullval, *prodsememptyval;
+int *conssemfullval, *conssememptyval;
+#endif
 
 /**
  * @brief producer thread
@@ -62,6 +70,12 @@ int main(int argc, char **argv)
     // cout << "======= generating random entries in ledger ============" << endl;
 
     // buffer = new record[b];
+    #ifdef DEBUG
+    prodsemfullval = new int[b];
+    prodsememptyval = new int[b];
+    conssemfullval = new int[b];
+    conssememptyval = new int[b];
+    #endif
     buffer = new int[b];
     for (size_t i = 0; i < b; i++) buffer[i] = -1;
     
@@ -79,7 +93,9 @@ int main(int argc, char **argv)
 
     sem_init(&buff_empty, 0, b);
     sem_init(&buff_full, 0, 0);
-    sem_init(&buff_mutex, 0, 1);
+    // sem_init(&buff_mutex, 0, 0);/* start locked */
+    pthread_mutex_init(&mutex, NULL);
+    pthread_mutex_lock(&mutex);
 
     pthread_attr_t attr;
     pthread_attr_init(&attr);
@@ -129,7 +145,8 @@ int main(int argc, char **argv)
         }
     }
 
-    // sem_post(&buff_empty);
+    // sem_post(&buff_mutex); /* release the hounds */
+    pthread_mutex_unlock(&mutex);
 
     // pthread_join(prod1, NULL);
     // pthread_join(prod2, NULL);
@@ -138,7 +155,7 @@ int main(int argc, char **argv)
     for (int i = 0; i < c; i++) pthread_join(consumers[i], NULL);
 
     cout << "=====================" << endl;
-    cout << "numProduced: " << numProduced << endl
+    cout << "numProduced: " << numProduced  << endl
          << "numRead: " << numRead << endl;
 
     pthread_exit(NULL);
@@ -156,39 +173,92 @@ void *producer(void * arg)
     do
     {
         /* entry section */
+        #ifdef DEBUG
+        sem_getvalue(&buff_empty, &prodsememptyval[id]);
+        printf("producer %d: buff_empty before: %d\n", id, prodsememptyval[id]);
+        cout << "producer " << id << " requesting buff_empty" << endl;
+        #endif
+
         sem_wait(&buff_empty);
+
+        #ifdef DEBUG
         cout << "producer " << id << " acquired buff_empty" << endl;
-        // pthread_mutex_lock(&buff_mutex);
-        sem_wait(&buff_mutex);
+        sem_getvalue(&buff_empty, &prodsememptyval[id]);
+        printf("producer %d: buff_empty after: %d\n", id, prodsememptyval[id]);
+        #endif
+
+        #ifdef DEBUG
+        cout << "producer " << id << " requesting mutex lock" << endl;
+        #endif
+        pthread_mutex_lock(&mutex);
+        // sem_wait(&buff_mutex);
+        #ifdef DEBUG
         cout << "producer " << id << " acquired mutex lock" << endl;
+        #endif
 
         /* critical section */
         if (numProduced < MAX_RECORDS) {
 
             cout << "producer " << id << ": put new thing "
-                << numProduced << " in buffer " << numProduced % b << endl;
+                        << numProduced << " in buffer " << numProduced % b << endl;
             buffer[numProduced % b] = numProduced;
             numProduced++;
 
-            cout << "producer: buffer: ";
-            for (int i = 0; i < b; i++) cout << buffer[i] << " ";
-            cout << endl;
+            #ifdef DEBUG
+            sem_getvalue(&buff_full, &prodsemfullval[id]);
+            printf("producer %d: buff_full before: %d\n", id, prodsemfullval[id]);
+            #endif
 
+            sem_post(&buff_full);
 
-            sleepdur = sleepdist(*gen) * 1000;
-            cout << "producer " << id << " sleeping for " << sleepdur / 1000 << "ms" << endl;
-            usleep(sleepdur);
-
+            #ifdef DEBUG
+            cout << "producer " << id << " released buff_full" << endl;
+            sem_getvalue(&buff_full, &prodsemfullval[id]);
+            printf("producer %d: buff_full after: %d\n", id, prodsemfullval[id]);
+            #endif
         }
-        // pthread_mutex_unlock(&buff_mutex);
-        sem_post(&buff_mutex);
+        else {
+            cout << "producer " << id << ": MAX_RECORDS met, undoing buff_empty wait" << endl;
+            #ifdef DEBUG
+            sem_getvalue(&buff_empty, &prodsememptyval[id]);
+            printf("producer %d: buff_empty before: %d\n", id, prodsememptyval[id]);
+            #endif
+
+            sem_post(&buff_empty);
+
+            #ifdef DEBUG
+            cout << "producer " << id << " released buff_empty" << endl;
+            sem_getvalue(&buff_empty, &prodsememptyval[id]);
+            printf("producer %d: buff_empty after: %d\n", id, prodsememptyval[id]);
+            #endif
+        }
+        
+        cout << "producer " << id << ": buffer: ";
+        for (int i = 0; i < b; i++) cout << buffer[i] << " ";
+        cout << endl;
+
+        pthread_mutex_unlock(&mutex);
+
+        #ifdef DEBUG
         cout << "producer " << id << " released mutex lock" << endl;
-        sem_post(&buff_full);
-        cout << "producer " << id << " released buff_full" << endl;
+        #endif
+
+        sleepdur = sleepdist(*gen) * 1000;
+        cout << "producer " << id << " sleeping for " << sleepdur / 1000 << "ms" << endl;
+        usleep(sleepdur);
 
         /* remainder section */
         // this_thread::sleep_for(chrono::milliseconds{sleepdist(gen)});
     } while(numProduced < MAX_RECORDS);
+
+    int numfull = 0, numempty= 0;
+    sem_getvalue(&buff_full, &numfull);
+    sem_getvalue(&buff_empty, &numempty);
+    printf("producer %d: numempty: %d; numfull: %d\n", id, numempty, numfull);
+    
+    if (numempty == b) sem_post(&buff_full);
+    
+    cout << "producer " << id << " finished; terminating" << endl;
 
     pthread_exit(NULL);
 }
@@ -200,40 +270,80 @@ void *consumer(void * arg) {
 
     vector<record> thread_ledger;
     int sleepdur;
+    int semval = 0;
 
     // while (numRead < MAX_RECORDS) 
     do
     {
+        #ifdef DEBUG
+        sem_getvalue(&buff_full, &conssemfullval[id]);
+        printf("consumer %d: buff_full before: %d\n", id, conssemfullval[id]);
+        cout << "consumer " << id << " requesting buff_full" << endl;
+        #endif
+
         sem_wait(&buff_full);
+
+        #ifdef DEBUG
         cout << "consumer " << id << " acquired buff_full" << endl;
-        sem_wait(&buff_mutex);
-        cout << "consumer " << id << " acquired buff_mutex" << endl;
-        // pthread_mutex_lock(&buff_mutex);
+        sem_getvalue(&buff_full, &conssemfullval[id]);
+        printf("consumer %d: buff_full after: %d\n", id, conssemfullval[id]);
+        cout << "consumer " << id << " requesting mutex lock" << endl;
+        #endif
+
+        pthread_mutex_lock(&mutex);
+        // sem_wait(&buff_mutex);
+
+        #ifdef DEBUG
+        cout << "consumer " << id << " acquired mutex lock" << endl;
+        #endif
 
         // thread_ledger.push_back(buffer[numRead % b]);
         // cout << "consumer: ";
         // print(buffer[index % b]);
         // buffer[index % b] = { 0, 0, 0, 0 };
         // index--;
-        cout << "consumer" << id << ": read thing " << numRead << " from buffer " << numRead % b << endl;
-        buffer[numRead % b] = -1;
-        cout << "consumer" << id << ": buffer: ";
+        if (numRead < MAX_RECORDS) {
+            cout << "consumer " << id << ": read thing " << numRead << " from buffer " << numRead % b << endl;
+            buffer[numRead % b] = -1;
+
+            numRead++;
+        }
+
+        cout << "consumer " << id << ": buffer: ";
         for (int i = 0; i < b; i++) cout << buffer[i] << " ";
         cout << endl;
 
-        numRead++;
+        // pthread_mutex_unlock(&buff_mutex);
+        // sem_post(&buff_mutex);
+        pthread_mutex_unlock(&mutex);
+
+        #ifdef DEBUG
+        cout << "consumer " << id << " released mutex lock" << endl;
+        sem_getvalue(&buff_empty, &conssememptyval[id]);
+        printf("consumer %d: buff_empty before: %d\n", id, conssememptyval[id]);
+        #endif
+        
+        sem_post(&buff_empty);
+
+        #ifdef DEBUG
+        cout << "consumer " << id << " released buff_empty" << endl;
+        sem_getvalue(&buff_empty, &conssememptyval[id]);
+        printf("consumer %d: buff_empty after: %d\n", id, conssememptyval[id]);
+        #endif
 
         sleepdur = sleepdist(*gen) * 1000;
-        cout << "consumer" << id << " sleeping for " << sleepdur / 1000 << "ms" << endl;
+        cout << "consumer " << id << " sleeping for " << sleepdur / 1000 << "ms" << endl;
         usleep(sleepdur);
+    } while (numRead < MAX_RECORDS);
 
+    int numfull = 0, numempty= 0;
+    sem_getvalue(&buff_full, &numfull);
+    sem_getvalue(&buff_empty, &numempty);
+    printf("consumer %d: numempty: %d; numfull: %d\n", id, numempty, numfull);
 
-        // pthread_mutex_unlock(&buff_mutex);
-        sem_post(&buff_mutex);
-        cout << "consumer " << id << "released buff_mutex" << endl;
-        sem_post(&buff_empty);
-        cout << "consumer " << id << "released buff_full" << endl;
-    } while (numRead < numProduced);
+    if(numfull == 0) sem_post(&buff_full);
+
+    cout << "consumer " << id << " finished; terminating" << endl;
 
     pthread_exit(NULL);
 }
