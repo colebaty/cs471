@@ -46,6 +46,7 @@ uniform_int_distribution<time_t> ddist;
 uniform_int_distribution<> storedist;
 uniform_int_distribution<> regdist;
 uniform_real_distribution<long double> pricedist;
+uniform_int_distribution<> sleepdist;
 
 #ifdef DEBUG
 int *prodsemfullval, *prodsememptyval;
@@ -60,7 +61,6 @@ int *conssemfullval, *conssememptyval;
  */
 void *producer(void * arg);
 void *consumer(void * arg);
-record newRecord();
 void print(record r);
 
 int main(int argc, char **argv)
@@ -74,8 +74,8 @@ int main(int argc, char **argv)
     }
     else {
         p = 5;
-        c = 2;
-        b = 3;
+        c = 5;
+        b = 5;
     }
 
     // cout << "======= generating random entries in ledger ============" << endl;
@@ -108,6 +108,7 @@ int main(int argc, char **argv)
     storedist = uniform_int_distribution<>(1,p);
     regdist = uniform_int_distribution<>(1,6);
     pricedist = uniform_real_distribution<long double>(50, 99999); /* [$.50, $999.99] in cents */
+    sleepdist = uniform_int_distribution<>(5,40);
 
     sem_init(&buff_empty, 0, b);
     sem_init(&buff_full, 0, 0);
@@ -188,7 +189,6 @@ int main(int argc, char **argv)
 }
 
 void *producer(void * arg) {
-    uniform_int_distribution<> sleepdist(5,40);
 
     int id = (int) (int*) arg;
     int sleepdur;
@@ -217,17 +217,21 @@ void *producer(void * arg) {
         #ifdef DEBUG
         cout << "producer " << id << " requesting mutex lock" << endl;
         #endif
+
         pthread_mutex_lock(&mutex);
+
         #ifdef DEBUG
         cout << "producer " << id << " acquired mutex lock" << endl;
         #endif
 
         /* critical section */
         if (numProduced < MAX_RECORDS) {
-            // *rptr = newRecord();
 
+            #ifdef DEBUG
             cout << "producer " << id << ": put new record "
                         << numProduced << " in buffer " << numProduced % b << endl;
+            #endif
+
             date = ddist(*gen);
             storeID = storedist(*gen);
             regID = regdist(*gen);
@@ -235,12 +239,14 @@ void *producer(void * arg) {
             buffer[numProduced % b] = { date, storeID, regID, price };
             numProduced++;
 
+            #ifdef DEBUG
             cout << "producer " << id << ": buffer contents: " << endl
                 << "======================================" << endl;
             for (int i = 0; i < b; i++) {
                 print(buffer[i]);
             }
             cout << "======================================" << endl;
+            #endif
 
             #ifdef DEBUG
             sem_getvalue(&buff_full, &prodsemfullval[id]);
@@ -256,8 +262,8 @@ void *producer(void * arg) {
             #endif
         }
         else {
-            cout << "producer " << id << ": MAX_RECORDS met, undoing buff_empty wait" << endl;
             #ifdef DEBUG
+            cout << "producer " << id << ": MAX_RECORDS met, undoing buff_empty wait" << endl;
             sem_getvalue(&buff_empty, &prodsememptyval[id]);
             printf("producer %d: buff_empty before: %d\n", id, prodsememptyval[id]);
             #endif
@@ -270,7 +276,6 @@ void *producer(void * arg) {
             printf("producer %d: buff_empty after: %d\n", id, prodsememptyval[id]);
             #endif
         }
-        
 
         pthread_mutex_unlock(&mutex);
 
@@ -279,27 +284,32 @@ void *producer(void * arg) {
         #endif
 
         sleepdur = sleepdist(*gen) * 1000;
+        #ifdef DEBUG
         cout << "producer " << id << " sleeping for " << sleepdur / 1000 << "ms" << endl;
+        #endif
         usleep(sleepdur);
 
         /* remainder section */
-        // this_thread::sleep_for(chrono::milliseconds{sleepdist(gen)});
     } while(numProduced < MAX_RECORDS);
 
     int numfull = 0, numempty= 0;
+
+    #ifdef DEBUG
     sem_getvalue(&buff_full, &numfull);
     sem_getvalue(&buff_empty, &numempty);
     printf("producer %d: numempty: %d; numfull: %d\n", id, numempty, numfull);
+    #endif
     
     if (numempty == b) sem_post(&buff_full);
     
+    #ifdef DEBUG
     cout << "producer " << id << " finished; terminating" << endl;
+    #endif
 
     pthread_exit(NULL);
 }
 
 void *consumer(void * arg) {
-    uniform_int_distribution<> sleepdist(5,40);
 
     int id = (int) (int*) arg;
 
@@ -331,13 +341,10 @@ void *consumer(void * arg) {
         cout << "consumer " << id << " acquired mutex lock" << endl;
         #endif
 
-        // thread_ledger.push_back(buffer[numRead % b]);
-        // cout << "consumer: ";
-        // print(buffer[index % b]);
-        // buffer[index % b] = { 0, 0, 0, 0 };
-        // index--;
         if (numRead < MAX_RECORDS) {
+            #ifdef DEBUG
             cout << "consumer " << id << ": read thing " << numRead << " from buffer " << numRead % b << endl;
+            #endif
             rptr = &buffer[numRead % b];
             buffer[numRead % b] = EMPTY;
             thread_ledger.push_back(*rptr);
@@ -345,12 +352,14 @@ void *consumer(void * arg) {
             numRead++;
         }
 
+        #ifdef DEBUG
         cout << "consumer " << id << ": buffer contents: " << endl
              << "======================================" << endl;
         for (int i = 0; i < b; i++) {
             print(buffer[i]);
         }
         cout << "======================================" << endl;
+        #endif
 
         pthread_mutex_unlock(&mutex);
 
@@ -368,43 +377,23 @@ void *consumer(void * arg) {
         printf("consumer %d: buff_empty after: %d\n", id, conssememptyval[id]);
         #endif
 
-        sleepdur = sleepdist(*gen) * 1000;
-        cout << "consumer " << id << " sleeping for " << sleepdur / 1000 << "ms" << endl;
-        usleep(sleepdur);
     } while (numRead < MAX_RECORDS);
 
     int numfull = 0, numempty= 0;
+    #ifdef DEBUG
     sem_getvalue(&buff_full, &numfull);
     sem_getvalue(&buff_empty, &numempty);
     printf("consumer %d: numempty: %d; numfull: %d\n", id, numempty, numfull);
+    #endif
 
     if(numfull == 0) sem_post(&buff_full);
 
+    #ifdef DEBUG
     cout << "consumer " << id << " finished; terminating" << endl;
+    #endif
 
     pthread_exit(NULL);
 }
-
-// record newRecord() {
-//         uniform_int_distribution<time_t> ddist(YEAR_START, YEAR_END);
-//         uniform_int_distribution<> storedist(1,p);
-//         uniform_int_distribution<> regdist(1,6);
-//         uniform_real_distribution<long double> pricedist(50, 99999); /* [$.50, $999.99] in cents */
-
-//         time_t date;
-//         int storeID, regID;
-//         long double price;
-
-//         date = ddist(*gen);
-//         assert(YEAR_START <= date && date <= YEAR_END);
-
-//         storeID = storedist(*gen);
-//         regID = regdist(*gen);
-//         price = pricedist(*gen);
-
-
-//         return record({date, storeID, regID, price});
-// }
 
 void print(record r) {
     cout.imbue((locale("")));
