@@ -13,10 +13,11 @@
 #include <pthread.h>
 #include <semaphore.h>
 #include <unistd.h>
+#include <chrono>
 
-#define MAX_RECORDS 10
+// #define MAX_RECORDS 10
 // #define MAX_RECORDS 100
-// #define MAX_RECORDS 1000
+#define MAX_RECORDS 1000
 
 const time_t YEAR_START = 1451606400;
 const time_t YEAR_END = 1483228799;
@@ -64,6 +65,8 @@ void print(record r);
 
 int main(int argc, char **argv)
 {
+    auto start = chrono::steady_clock::now();
+
     if (argc == 4) {
         p = atoi(argv[1]);
         c = atoi(argv[2]);
@@ -172,6 +175,12 @@ int main(int argc, char **argv)
     cout << "=====================" << endl;
     cout << "numProduced: " << numProduced  << endl
          << "numRead: " << numRead << endl;
+
+    auto end = chrono::steady_clock::now();
+
+    chrono::duration<double> time_elapsed = end - start;
+
+    printf("elapsed time: %fs\n", time_elapsed.count());
 
     pthread_exit(NULL);
 
