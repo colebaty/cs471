@@ -15,9 +15,9 @@
 #include <unistd.h>
 #include <chrono>
 
-// #define MAX_RECORDS 10
+#define MAX_RECORDS 10
 // #define MAX_RECORDS 100
-#define MAX_RECORDS 1000
+// #define MAX_RECORDS 1000
 
 const time_t YEAR_START = 1451606400;
 const time_t YEAR_END = 1483228799;
@@ -33,7 +33,9 @@ record *rptr;
 
 /* shared variables */
 sem_t buff_full, buff_empty, buff_mutex;
+sem_t check_done, proceed;
 pthread_mutex_t mutex;
+bool done = false;
 
 vector<record> master_ledger;
 record *buffer;
@@ -61,6 +63,7 @@ int *conssemfullval, *conssememptyval;
  */
 void *producer(void * arg);
 void *consumer(void * arg);
+void *allread(void *arg);
 void print(record r);
 
 int main(int argc, char **argv)
@@ -78,8 +81,6 @@ int main(int argc, char **argv)
         b = 5;
     }
 
-    // cout << "======= generating random entries in ledger ============" << endl;
-
     buffer = new record[b];
     #ifdef DEBUG
     prodsemfullval = new int[b];
@@ -91,16 +92,14 @@ int main(int argc, char **argv)
     for (size_t i = 0; i < b; i++) buffer[i] = { 0, 0, 0, 0 };
     
     cout << "========= info =================" << endl;
-    cout << "b: " << b << endl;
+    printf("p: %d | c: %d | b: %d\n", p, c, b);
     cout << "buffer contents: " << endl
          << "======================================" << endl;
         for (int i = 0; i < b; i++) {
             print(buffer[i]);
         }
     cout << "======================================" << endl;
-
     cout << "================================" << endl;
-
 
     random_device r;
     gen = new default_random_engine(r());
@@ -112,31 +111,13 @@ int main(int argc, char **argv)
 
     sem_init(&buff_empty, 0, b);
     sem_init(&buff_full, 0, 0);
-    // sem_init(&buff_mutex, 0, 0);/* start locked */
+    sem_init(&check_done, 0, 0);
+    sem_init(&proceed, 0, 1);
     pthread_mutex_init(&mutex, NULL);
-    pthread_mutex_lock(&mutex);
+    pthread_mutex_lock(&mutex); /* hold your horses, everybody */
 
     pthread_attr_t attr;
     pthread_attr_init(&attr);
-
-    // pthread_t prod1;
-    // int rc, id;
-    // id = 1;
-    // rc = pthread_create(&prod1, &attr, producer, (void *) &id);
-    // if (rc) {
-    //     fprintf(stderr, "ERROR: return code from pthread_create is %d\n", rc);
-    //     exit(1);
-    // }
-
-    // usleep(1000);
-
-    // pthread_t prod2;
-    // id = 2;
-    // rc = pthread_create(&prod2, &attr, producer, (void *) &id);
-    // if (rc) {
-    //     fprintf(stderr, "ERROR: return code from pthread_create is %d\n", rc);
-    //     exit(1);
-    // }
 
     pthread_t producers[p];
     int rc;
@@ -148,13 +129,6 @@ int main(int argc, char **argv)
         }
     }
 
-    // pthread_t cons;
-    // rc = pthread_create(&cons, &attr, consumer, NULL);
-    // if (rc) {
-    //     fprintf(stderr, "ERROR: return code from pthread_create is %d\n", rc);
-    //     exit(1);
-    // }
-
     pthread_t consumers[c];
     for (int i = 0; i < c; i++) {
         rc = pthread_create(&consumers[i], &attr, consumer, (void *) i);
@@ -164,14 +138,16 @@ int main(int argc, char **argv)
         }
     }
 
-    // sem_post(&buff_mutex); /* release the hounds */
-    pthread_mutex_unlock(&mutex);
+    pthread_t thread_allread;
+    if(rc = pthread_create(&thread_allread, &attr, allread, NULL)) {
+        fprintf(stderr, "ERROR: return code from pthread_create is %d\n", rc);
+    }
 
-    // pthread_join(prod1, NULL);
-    // pthread_join(prod2, NULL);
+    pthread_mutex_unlock(&mutex);
 
     for (int i = 0; i < p; i++) pthread_join(producers[i], NULL);
     for (int i = 0; i < c; i++) pthread_join(consumers[i], NULL);
+    pthread_join(thread_allread, NULL);
 
     cout << "=====================" << endl;
     cout << "numProduced: " << numProduced  << endl
@@ -377,7 +353,17 @@ void *consumer(void * arg) {
         printf("consumer %d: buff_empty after: %d\n", id, conssememptyval[id]);
         #endif
 
-    } while (numRead < MAX_RECORDS);
+        /* check for all records read */
+        #ifdef DEBUG
+        cout << "consumer " << id << " releasing check_done" << endl;
+        #endif
+        sem_post(&check_done);
+        #ifdef DEBUG
+        cout << "consumer " << id << " requesting proceed" << endl;
+        #endif
+        sem_wait(&proceed);
+
+    } while (!done);
 
     int numfull = 0, numempty= 0;
     #ifdef DEBUG
@@ -391,6 +377,36 @@ void *consumer(void * arg) {
     #ifdef DEBUG
     cout << "consumer " << id << " finished; terminating" << endl;
     #endif
+
+    sem_post(&proceed);
+
+    pthread_exit(NULL);
+}
+
+void *allread(void *arg){
+    int numwaiting;
+    do {
+        #ifdef DEBUG
+        cout << "allread: requesting check_done" << endl;
+        #endif
+
+        sem_wait(&check_done);
+
+        #ifdef DEBUG
+        cout << "allread: received check_done" << endl;
+        #endif
+
+        done = numRead >= MAX_RECORDS;
+        #ifdef DEBUG
+        if (done) cout << "allread: all records read" << endl;
+        #endif
+
+        #ifdef DEBUG
+        cout << "allread: releasing proceed" << endl;
+        #endif
+
+        sem_post(&proceed);
+    } while (!done);
 
     pthread_exit(NULL);
 }
