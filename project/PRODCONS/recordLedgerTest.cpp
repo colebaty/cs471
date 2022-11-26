@@ -43,9 +43,9 @@ int p, c, b;
 int numProduced = 0, numRead = 0;
 
 vector<record> master_ledger;
-map<int, long double> aggregate_store_wide_sales;
-map<int, long double> aggregate_monthly_sales;
-long double aggregate_sales;
+map<int, long double> *aggregate_store_wide_sales;
+map<int, long double> *aggregate_monthly_sales;
+long double *aggregate_sales;
 
 default_random_engine * gen;
 uniform_int_distribution<time_t> ddist;
@@ -105,6 +105,10 @@ int main(int argc, char **argv)
     cout << "================================" << endl;
     #endif
 
+    aggregate_store_wide_sales = new map<int, long double>;
+    aggregate_monthly_sales = new map<int, long double>;
+    aggregate_sales = new long double;
+
     /* random generator initialization */
     random_device r;
     gen = new default_random_engine(r());
@@ -158,7 +162,7 @@ int main(int argc, char **argv)
     pthread_join(thread_allread, NULL);
 
     cout << "\\/\\/\\/\\/ AGGREGATE SALES \\/\\/\\/\\/" << endl;
-    print(aggregate_store_wide_sales, aggregate_monthly_sales, aggregate_sales);
+    print(*aggregate_store_wide_sales, *aggregate_monthly_sales, *aggregate_sales);
     cout << "/\\/\\/\\/\\ AGGREGATE SALES /\\/\\/\\/\\" << endl;
 
     cout << "=====================" << endl;
@@ -454,16 +458,16 @@ void computestats(vector<record> &ledger) {
     for (auto entry : ledger) {
         /* store-wide total sales */
         store_wide_total_sales[get<1>(entry)] += get<3>(entry);
-        aggregate_store_wide_sales[get<1>(entry)] += get<3>(entry);
+        (*aggregate_store_wide_sales)[get<1>(entry)] += get<3>(entry);
 
         /* monthly total sales in all stores*/
         t_m = localtime(&get<0>(entry));
         month_wise_total_sales[t_m->tm_mon] += get<3>(entry);
-        aggregate_monthly_sales[t_m->tm_mon] += get<3>(entry);
+        (*aggregate_monthly_sales)[t_m->tm_mon] += get<3>(entry);
 
         /* aggregate sales */
         all_sales += get<3>(entry);
-        aggregate_sales += get<3>(entry);
+        *aggregate_sales += get<3>(entry);
     }
 
     print(store_wide_total_sales, month_wise_total_sales, all_sales);
