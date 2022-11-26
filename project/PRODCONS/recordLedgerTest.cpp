@@ -483,6 +483,7 @@ void print(record r) {
 void print(const map<int, long double>& swts, const map<int, long double>& mwts, const long double& all)
 {
     cout.imbue(locale(""));
+    cout << showbase;
     cout << "store-wide total sales" << endl;
     cout << left
          << setw(20) << "STORE"
