@@ -38,11 +38,14 @@ sem_t check_done, proceed, compute;
 pthread_mutex_t mutex;
 bool done = false;
 
-vector<record> master_ledger;
 record *buffer;
-// int * buffer;
-int p, c, b, index = 0;
+int p, c, b;
 int numProduced = 0, numRead = 0;
+
+vector<record> master_ledger;
+map<int, long double> aggregate_store_wide_sales;
+map<int, long double> aggregate_monthly_sales;
+long double aggregate_sales;
 
 default_random_engine * gen;
 uniform_int_distribution<time_t> ddist;
@@ -80,6 +83,7 @@ int main(int argc, char **argv)
     }
 
     buffer = new record[b];
+
     #ifdef DEBUG
     prodsemfullval = new int[b];
     prodsememptyval = new int[b];
@@ -89,6 +93,7 @@ int main(int argc, char **argv)
     
     for (size_t i = 0; i < b; i++) buffer[i] = { 0, 0, 0, 0 };
     
+    #ifdef DEBUG
     cout << "========= info =================" << endl;
     printf("p: %d | c: %d | b: %d\n", p, c, b);
     cout << "buffer contents: " << endl
@@ -98,7 +103,9 @@ int main(int argc, char **argv)
         }
     cout << "======================================" << endl;
     cout << "================================" << endl;
+    #endif
 
+    /* random generator initialization */
     random_device r;
     gen = new default_random_engine(r());
     ddist = uniform_int_distribution<time_t>(YEAR_START, YEAR_END);
@@ -107,6 +114,7 @@ int main(int argc, char **argv)
     pricedist = uniform_real_distribution<long double>(50, 99999); /* [$.50, $999.99] in cents */
     sleepdist = uniform_int_distribution<>(5,40);
 
+    /* semaphore/mutex initialization */
     sem_init(&buff_empty, 0, b);
     sem_init(&buff_full, 0, 0);
     sem_init(&check_done, 0, 0);
@@ -115,6 +123,7 @@ int main(int argc, char **argv)
     pthread_mutex_init(&mutex, NULL);
     pthread_mutex_lock(&mutex); /* hold your horses, everybody */
 
+    /* thread initialization, spawning */
     pthread_attr_t attr;
     pthread_attr_init(&attr);
 
@@ -142,18 +151,21 @@ int main(int argc, char **argv)
         fprintf(stderr, "ERROR: return code from pthread_create is %d\n", rc);
     }
 
-    pthread_mutex_unlock(&mutex);
+    pthread_mutex_unlock(&mutex); /* release the hounds */
 
     for (int i = 0; i < p; i++) pthread_join(producers[i], NULL);
     for (int i = 0; i < c; i++) pthread_join(consumers[i], NULL);
     pthread_join(thread_allread, NULL);
+
+    cout << "\\/\\/\\/\\/ AGGREGATE SALES \\/\\/\\/\\/" << endl;
+    print(aggregate_store_wide_sales, aggregate_monthly_sales, aggregate_sales);
+    cout << "/\\/\\/\\/\\ AGGREGATE SALES /\\/\\/\\/\\" << endl;
 
     cout << "=====================" << endl;
     cout << "numProduced: " << numProduced  << endl
          << "numRead: " << numRead << endl;
 
     auto end = chrono::steady_clock::now();
-
     chrono::duration<double> time_elapsed = end - start;
 
     printf("elapsed time: %fs\n", time_elapsed.count());
@@ -276,6 +288,10 @@ void *producer(void * arg) {
     printf("producer %d: numempty: %d; numfull: %d\n", id, numempty, numfull);
     #endif
     
+    /* 
+        if we've reached here, all the records have been generated, but there
+        may still be threads waiting for buff_full
+    */
     if (numempty == b) sem_post(&buff_full);
     
     #ifdef DEBUG
@@ -286,14 +302,12 @@ void *producer(void * arg) {
 }
 
 void *consumer(void * arg) {
-
     int id = (int) (int*) arg;
 
     vector<record> thread_ledger;
     int sleepdur;
     int semval = 0;
 
-    // while (numRead < MAX_RECORDS) 
     do
     {
         #ifdef DEBUG
@@ -378,14 +392,15 @@ void *consumer(void * arg) {
 
     if(numfull == 0) sem_post(&buff_full);
 
-
     sem_post(&proceed);
 
     sem_wait(&compute);
     pthread_mutex_lock(&mutex);
+
     printf("\\/\\/\\/\\/ consumer %d statistics \\/\\/\\/\\/\n", id);
     computestats(thread_ledger);
     printf("/\\/\\/\\/\\ consumer %d statistics /\\/\\/\\/\\\n\n", id);
+
     pthread_mutex_unlock(&mutex);
 
     #ifdef DEBUG
@@ -432,17 +447,23 @@ void computestats(vector<record> &ledger) {
     map<int, long double> month_wise_total_sales;
     long double all_sales = 0;
 
+    #ifdef DEBUG
     printf("computestats: ledger addr: %X\n", &ledger);
+    #endif
+
     for (auto entry : ledger) {
         /* store-wide total sales */
         store_wide_total_sales[get<1>(entry)] += get<3>(entry);
+        aggregate_store_wide_sales[get<1>(entry)] += get<3>(entry);
 
         /* monthly total sales in all stores*/
         t_m = localtime(&get<0>(entry));
         month_wise_total_sales[t_m->tm_mon] += get<3>(entry);
+        aggregate_monthly_sales[t_m->tm_mon] += get<3>(entry);
 
         /* aggregate sales */
         all_sales += get<3>(entry);
+        aggregate_sales += get<3>(entry);
     }
 
     print(store_wide_total_sales, month_wise_total_sales, all_sales);
