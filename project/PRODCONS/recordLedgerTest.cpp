@@ -14,10 +14,11 @@
 #include <semaphore.h>
 #include <unistd.h>
 #include <chrono>
+#include <map>
 
-#define MAX_RECORDS 10
+// #define MAX_RECORDS 10
 // #define MAX_RECORDS 100
-// #define MAX_RECORDS 1000
+#define MAX_RECORDS 1000
 
 const time_t YEAR_START = 1451606400;
 const time_t YEAR_END = 1483228799;
@@ -33,7 +34,7 @@ record *rptr;
 
 /* shared variables */
 sem_t buff_full, buff_empty, buff_mutex;
-sem_t check_done, proceed;
+sem_t check_done, proceed, compute;
 pthread_mutex_t mutex;
 bool done = false;
 
@@ -55,16 +56,13 @@ int *prodsemfullval, *prodsememptyval;
 int *conssemfullval, *conssememptyval;
 #endif
 
-/**
- * @brief producer thread
- * 
- * @param id 
- * @param gen 
- */
 void *producer(void * arg);
 void *consumer(void * arg);
 void *allread(void *arg);
+
+void computestats(vector<record> &ledger);
 void print(record r);
+void print(const map<int, long double>& swts, const map<int, long double>& mwts, const long double& all);
 
 int main(int argc, char **argv)
 {
@@ -113,6 +111,7 @@ int main(int argc, char **argv)
     sem_init(&buff_full, 0, 0);
     sem_init(&check_done, 0, 0);
     sem_init(&proceed, 0, 1);
+    sem_init(&compute, 0, 1);
     pthread_mutex_init(&mutex, NULL);
     pthread_mutex_lock(&mutex); /* hold your horses, everybody */
 
@@ -270,9 +269,10 @@ void *producer(void * arg) {
 
     int numfull = 0, numempty= 0;
 
-    #ifdef DEBUG
     sem_getvalue(&buff_full, &numfull);
     sem_getvalue(&buff_empty, &numempty);
+
+    #ifdef DEBUG
     printf("producer %d: numempty: %d; numfull: %d\n", id, numempty, numfull);
     #endif
     
@@ -322,8 +322,8 @@ void *consumer(void * arg) {
             cout << "consumer " << id << ": read thing " << numRead << " from buffer " << numRead % b << endl;
             #endif
             rptr = &buffer[numRead % b];
-            buffer[numRead % b] = EMPTY;
             thread_ledger.push_back(*rptr);
+            buffer[numRead % b] = EMPTY;
 
             numRead++;
         }
@@ -357,28 +357,40 @@ void *consumer(void * arg) {
         #ifdef DEBUG
         cout << "consumer " << id << " releasing check_done" << endl;
         #endif
+
         sem_post(&check_done);
+
         #ifdef DEBUG
         cout << "consumer " << id << " requesting proceed" << endl;
         #endif
+        
         sem_wait(&proceed);
 
     } while (!done);
 
     int numfull = 0, numempty= 0;
-    #ifdef DEBUG
     sem_getvalue(&buff_full, &numfull);
     sem_getvalue(&buff_empty, &numempty);
+
+    #ifdef DEBUG
     printf("consumer %d: numempty: %d; numfull: %d\n", id, numempty, numfull);
     #endif
 
     if(numfull == 0) sem_post(&buff_full);
 
+
+    sem_post(&proceed);
+
+    sem_wait(&compute);
+    pthread_mutex_lock(&mutex);
+    printf("\\/\\/\\/\\/ consumer %d statistics \\/\\/\\/\\/\n", id);
+    computestats(thread_ledger);
+    printf("/\\/\\/\\/\\ consumer %d statistics /\\/\\/\\/\\\n\n", id);
+    pthread_mutex_unlock(&mutex);
+
     #ifdef DEBUG
     cout << "consumer " << id << " finished; terminating" << endl;
     #endif
-
-    sem_post(&proceed);
 
     pthread_exit(NULL);
 }
@@ -411,6 +423,32 @@ void *allread(void *arg){
     pthread_exit(NULL);
 }
 
+void computestats(vector<record> &ledger) {
+    struct tm *t_m;
+    /* storeID : sale amt */
+    map<int, long double> store_wide_total_sales;
+
+    /* month : sale amt */
+    map<int, long double> month_wise_total_sales;
+    long double all_sales = 0;
+
+    printf("computestats: ledger addr: %X\n", &ledger);
+    for (auto entry : ledger) {
+        /* store-wide total sales */
+        store_wide_total_sales[get<1>(entry)] += get<3>(entry);
+
+        /* monthly total sales in all stores*/
+        t_m = localtime(&get<0>(entry));
+        month_wise_total_sales[t_m->tm_mon] += get<3>(entry);
+
+        /* aggregate sales */
+        all_sales += get<3>(entry);
+    }
+
+    print(store_wide_total_sales, month_wise_total_sales, all_sales);
+    sem_post(&compute);
+}
+
 void print(record r) {
     cout.imbue((locale("")));
     cout << left
@@ -419,4 +457,40 @@ void print(record r) {
          << setw(20) << get<2>(r)
          << setw(20) << showbase << put_money(get<3>(r)) << endl;
 
+}
+
+void print(const map<int, long double>& swts, const map<int, long double>& mwts, const long double& all)
+{
+    cout.imbue(locale(""));
+    cout << "store-wide total sales" << endl;
+    cout << left
+         << setw(20) << "STORE"
+         << setw(20) << "$ AMT"
+         << endl;
+
+    for (const auto& [key, value] : swts) {
+        cout << setw(20) << key << setw(20) << put_money(value) << endl;
+    }
+
+    cout << endl;
+
+    cout << "month-wise total sales" << endl;
+    cout << left
+         << setw(20) << "MONTH"
+         << setw(20) << "$ AMT"
+         << endl;
+
+    struct tm *t_m;
+    for (const auto& [key, value] : mwts) {
+        t_m->tm_mon = key;
+        cout << left 
+             << setw(17) << put_time(t_m, "%b") << " " 
+             << setw(20) << put_money(value) << endl;
+    }
+
+    cout << endl
+         << "=================" << endl;
+
+    cout << "total sales: " << put_money(all) << endl;
+    cout << endl;
 }
