@@ -1,1 +1,6 @@
 out
+sample*
+prodcons
+*.dep
+*.d
+*.o
