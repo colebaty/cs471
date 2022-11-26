@@ -23,8 +23,6 @@
 const time_t YEAR_START = 1451606400;
 const time_t YEAR_END = 1483228799;
 
-enum month { JAN, FEB, MAR, APR, JUN, JUL, AUG, SEP, OCT, NOV, DEC };
-
 using namespace std;
 
 /* sales date, store ID, register, sale amt */
@@ -42,7 +40,7 @@ record *buffer;
 int p, c, b;
 int numProduced = 0, numRead = 0;
 
-vector<record> master_ledger;
+vector<record> *master_ledger;
 map<int, long double> *aggregate_store_wide_sales;
 map<int, long double> *aggregate_monthly_sales;
 long double *aggregate_sales;
@@ -105,6 +103,7 @@ int main(int argc, char **argv)
     cout << "================================" << endl;
     #endif
 
+    master_ledger = new vector<record>;
     aggregate_store_wide_sales = new map<int, long double>;
     aggregate_monthly_sales = new map<int, long double>;
     aggregate_sales = new long double;
@@ -162,7 +161,8 @@ int main(int argc, char **argv)
     pthread_join(thread_allread, NULL);
 
     cout << "\\/\\/\\/\\/ AGGREGATE SALES \\/\\/\\/\\/" << endl;
-    print(*aggregate_store_wide_sales, *aggregate_monthly_sales, *aggregate_sales);
+    // print(*aggregate_store_wide_sales, *aggregate_monthly_sales, *aggregate_sales);
+    computestats(*master_ledger);
     cout << "/\\/\\/\\/\\ AGGREGATE SALES /\\/\\/\\/\\" << endl;
 
     cout << "=====================" << endl;
@@ -181,7 +181,8 @@ int main(int argc, char **argv)
 
 void *producer(void * arg) {
 
-    int id = (int) (int*) arg;
+    /* producers assigned fixed store ID; store IDs on range [1, p]*/
+    int id = (int) (int*) arg + 1;
     int sleepdur;
 
     time_t date;
@@ -224,10 +225,9 @@ void *producer(void * arg) {
             #endif
 
             date = ddist(*gen);
-            storeID = storedist(*gen);
             regID = regdist(*gen);
             price = pricedist(*gen);
-            buffer[numProduced % b] = { date, storeID, regID, price };
+            buffer[numProduced % b] = { date, id, regID, price };
             numProduced++;
 
             #ifdef DEBUG
@@ -341,6 +341,7 @@ void *consumer(void * arg) {
             #endif
             rptr = &buffer[numRead % b];
             thread_ledger.push_back(*rptr);
+            master_ledger->push_back(*rptr);
             buffer[numRead % b] = EMPTY;
 
             numRead++;
@@ -507,7 +508,7 @@ void print(const map<int, long double>& swts, const map<int, long double>& mwts,
          << endl;
 
     struct tm *t_m;
-    for (const auto& [key, value] : mwts) {
+    for (auto [key, value] : mwts) {
         t_m->tm_mon = key;
         cout << left 
              << setw(17) << put_time(t_m, "%b") << " " 
