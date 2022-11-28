@@ -6,15 +6,16 @@
 #include <random>
 #include <cassert>
 #include <algorithm>
-#include <stdio.h>
-#include <time.h>
 #include <utility>
 #include <tuple>
+#include <chrono>
+#include <map>
+
 #include <pthread.h>
 #include <semaphore.h>
 #include <unistd.h>
-#include <chrono>
-#include <map>
+#include <stdio.h>
+#include <time.h>
 
 // #define MAX_RECORDS 10
 // #define MAX_RECORDS 100
@@ -57,16 +58,17 @@ int *prodsemfullval, *prodsememptyval;
 int *conssemfullval, *conssememptyval;
 #endif
 
+/* thread control */
 void *producer(void * arg);
 void *consumer(void * arg);
 void *allread(void *arg);
 
+/* helper functions */
 void computestats(vector<record> &ledger);
 void print(record r);
 void print(const map<int, long double>& swts, const map<int, long double>& mwts, const long double& all);
 
-int main(int argc, char **argv)
-{
+int main(int argc, char **argv) {
     auto start = chrono::steady_clock::now();
 
     if (argc == 4) {
@@ -75,9 +77,8 @@ int main(int argc, char **argv)
         b = atoi(argv[3]);
     }
     else {
-        p = 5;
-        c = 5;
-        b = 5;
+        cout << "usage: prodcons <p> <c> <b>" << endl;
+        return 1;
     }
 
     buffer = new record[b];
