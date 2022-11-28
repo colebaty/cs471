@@ -6,7 +6,7 @@ b=(2 10)
 
 if [ ! -f prodcons ]; then
     echo "no executable found; compiling"
-    g++ -g -o prodcons -fpermissive -fdiagnostics-color=always main.cpp -lpthread
+    g++ -g -std=c++17 -o prodcons -fpermissive -fdiagnostics-color=always main.cpp -lpthread
 fi
 
 for i in ${p[@]}; do
