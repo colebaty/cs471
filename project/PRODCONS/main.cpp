@@ -1,3 +1,13 @@
+/**
+ * @file main.cpp
+ * @author Cole Baty
+ * @brief Producers/Consumers problem for CS 471 final project, Fall 2022
+ * @version 0.1
+ * @date 2022-11-28
+ * 
+ * @copyright Copyright (c) 2022
+ * 
+ */
 // #define DEBUG
 
 #include <iostream>
@@ -173,7 +183,7 @@ int main(int argc, char **argv) {
     auto end = chrono::steady_clock::now();
     chrono::duration<double> time_elapsed = end - start;
 
-    printf("elapsed time: %.3fs\n", time_elapsed.count());
+    printf("elapsed time (s): %.3f\n", time_elapsed.count());
     /* pointer housekeeping */
     delete buffer;
     delete master_ledger;
