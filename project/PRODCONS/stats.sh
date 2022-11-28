@@ -15,7 +15,7 @@ for i in ${p[@]}; do
                 echo "sample-$i-$j-$k not found; skipping"
                 continue
             else
-                dur=$(tail -n1 "sample-$i-$j-$k" | cut -d' ' -f3)
+                dur=$(tail -n1 "sample-$i-$j-$k" | cut -d' ' -f4)
                 echo "$i,$j,$k,$dur" >> stats.csv
             fi
         done
