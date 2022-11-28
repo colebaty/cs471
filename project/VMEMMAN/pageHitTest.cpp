@@ -126,7 +126,7 @@ int main(int argc, char **argv) {
                     ? "hit" 
                     : "miss", 
                 isAllocated((*q)[i])
-                );
+        );
     }
 
     /* pointer housekeeping */
