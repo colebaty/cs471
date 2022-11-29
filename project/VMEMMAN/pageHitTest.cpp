@@ -20,11 +20,11 @@ typedef tuple<int, int, algorithm, long double> record;
 
 int pagesize, numframes;
 vector<int> * pt; /* page table */
-multimap<int, pair<int, int>> * qmap; /* { page#, { reference, index in q }}*/
+multimap<int, pair<int, int>> * qmap; /* { page#, { index in q, reference }}*/
 vector<int> * q; /* queue of references */
 vector<int>::iterator head;
 
-void printAll(multimap<int, int>& r);
+void printAll(multimap<int, pair<int, int>>& r);
 
 /**
  * @brief returns the page table index if the referenced address is contained on a page 
@@ -86,12 +86,13 @@ int main(int argc, char **argv) {
     ifstream * in = new ifstream(filename);
     qmap = new multimap<int, pair<int, int>>();
     q = new vector<int>();
-    head = q->begin();
     int ref;
     for (int i = 0; *in >> ref; i++ ) {
         qmap->insert( { getLogicalPage(ref), { i, ref } } );
         q->push_back(ref);
     }
+
+    head = q->begin();
 
     #ifdef DEBUG
     cout << "contents of ref:" << endl;
@@ -137,7 +138,10 @@ int main(int argc, char **argv) {
         );
     }
 
-
+    while (head != q->end()) {
+        printf("next victim: %d\n", optimal());
+        head++;
+    }
 
     /* pointer housekeeping */
     delete qmap;
@@ -167,19 +171,22 @@ void printpt() {
     }
 }
 
-void printAll(multimap<int, int>& r) {
+void printAll(multimap<int, pair<int, int>>& r) {
     for (const auto& [key, value] : r) {
-        cout << "[" << key << "] = " << value << endl;
+        printf("[%d]:<%d, %d>\n", key, value.first, value.second);
     }
 };
 
 int optimal() {
     vector<int> dist_to_next_ref;
-    for (int i = 0; i < numframes; i++) {
-        auto target = next(q->begin(), 
-                            qmap->lower_bound((*pt)[i])->second.second -1);
-        dist_to_next_ref[i] = distance(head, target);
+    for (auto frame : *pt) {
+        auto target = next(q->begin(), (qmap->lower_bound(frame))->second.first );
+        dist_to_next_ref.push_back(distance(head, target));
     }
+
+    #ifdef DEBUG
+    assert(dist_to_next_ref.size() == numframes);
+    #endif
 
     auto dist_to_victim = max_element(dist_to_next_ref.begin(), dist_to_next_ref.end());
     auto victim = next(dist_to_next_ref.begin(), *dist_to_victim - 1);
