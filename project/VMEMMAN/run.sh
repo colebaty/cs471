@@ -16,16 +16,11 @@ if [ ! -f input ]; then
     echo "please place input file in same directory as executable"
     echo "file must have name 'input'"
 else
-    echo "running simulations; data stored in file 'samples'"
-    echo > samples
+    echo "running simulations; data stored in file 'sample-p-f'"
 
     for i in ${p[@]}; do 
         for j in ${f[@]}; do 
-            echo "=====| p = $i | f = $j |=====" >> samples
-            ./main $i $j input >> samples
-            echo "=============================" >> samples
-            echo >> samples; 
+            ./main $i $j input > "sample-$i-$j"
         done; 
     done 
-    cat samples
 fi
