@@ -1,3 +1,14 @@
+/**
+ * @file main.cpp
+ * @author Cole Baty
+ * @brief Optimal, LRU, MRU and FIFO implementations of demand paging for 
+ * CS 471 at ODU Fall '22
+ * @version 0.1
+ * @date 2022-11-30
+ * 
+ * @copyright Copyright (c) 2022
+ * 
+ */
 #include <iostream>
 #include <iomanip>
 #include <fstream>
