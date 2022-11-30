@@ -2,7 +2,7 @@
 
 p=(2 5 10)
 c=(2 5 10)
-b=(2 10)
+b=(5 10 100)
 
 echo "compiling statistics"
 
