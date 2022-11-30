@@ -21,7 +21,8 @@ enum algorithm { FIFO, LRU, MRU, OPT };
 typedef tuple<int, int, algorithm, long double> record;
 
 /**
- * @brief nodes for stack/doubly linked list LRU implementation
+ * @brief nodes for stack/doubly linked list LRU implementation. see section
+ * 9.4.4 in text for clarification on use of stack structure
  * 
  */
 struct node {
@@ -47,7 +48,12 @@ multimap<int, pair<int, int>> * qmap;
  */
 int * faults = new int[4];
 
-void printAll(multimap<int, pair<int, int>>& r);
+/**
+ * @brief debug function to print the queue map
+ * 
+ * @param r 
+ */
+void printqmap(multimap<int, pair<int, int>>& r);
 
 /**
  * @brief returns the page table index if the referenced address is contained on a page 
@@ -57,6 +63,15 @@ void printAll(multimap<int, pair<int, int>>& r);
  * @return int 
  */
 int isAllocated(int r, int *pt);
+
+/**
+ * @brief returns true if all frames frames contain a page, false otherwise
+ * 
+ * @param frames 
+ * @return true 
+ * @return false 
+ */
+bool isFull(int * frames);
 
 /**
  * @brief returns the logical page number for a given address reference.
@@ -76,7 +91,7 @@ void printframes(algorithm alg);
 
 /**
  * @brief returns the index to replace in the page table, which may then be
- * replaced with the page supplied by the record in qmap. "replac the page that 
+ * replaced with the page supplied by the record in qmap. "replace the page that 
  * will not be used for the longest period of time"
  * 
  * 
@@ -86,10 +101,47 @@ void printframes(algorithm alg);
  */
 int optimal(int& r, int index);
 
+/**
+ * @brief for page faults, returns the index of the frame containing the least
+ * recently used page. returns -1 for page hits.
+ * 
+ * @param ref 
+ * @return int replacement frame index; -1 for hits
+ */
 int lru(int& ref);
+
+/**
+ * @brief returns the index of the frame containing the least-recently used 
+ * page. begins searching from bottom of the stack
+ * 
+ * @param f 
+ * @return int 
+ */
 int lru_victim(int * f);
+
+/**
+ * @brief for page faults, returns the index of the frame containing the most
+ * recently used page. returns -1 for page hits
+ * 
+ * @param ref 
+ * @return int replacement frame indes; -1 for hits
+ */
+int mru(int& ref);
+
+/**
+ * @brief returns the index of the frame containing the most-recently used
+ * page.  begins searching from top of the stack
+ * 
+ * @param f 
+ * @return int 
+ */
 int mru_victim(int * f);
 
+/**
+ * @brief maintains the stack data structure used in both lru and mru algorithms
+ * 
+ * @param page the referenced page
+ */
 void updatestack(int page);
 
 /**
@@ -112,6 +164,7 @@ int main(int argc, char **argv) {
     numframes = atoi(argv[2]);
     char * filename = argv[3];
 
+    /* initialize frames */
     frames = new int*[NUM_ALGS]; 
     for (int i = 0; i < NUM_ALGS; i++) {
         frames[i] = new int[numframes];
@@ -139,9 +192,12 @@ int main(int argc, char **argv) {
         q->push_back(ref);
     }
 
-    /* get number of pages. the key of very last element in qmap is the zero-indexed
-    number of the last page inserted. mathematically, i know that the number of pages is
-        = ceil( largest reference in q / page size)*/
+    /* 
+        get number of pages. the key of very last element in qmap is the 
+        zero-indexed number of the highest-numbered inserted page. 
+        mathematically, i know that the number of pages is
+            = ceil( largest reference in q / page size)
+    */
     auto np = qmap->end();
     np--;
     numpages = np->first + 1;
@@ -174,11 +230,17 @@ int main(int argc, char **argv) {
             cout << "=======================" << endl;
             #endif
         }
+        /* implied else: hit; do nothing */
 
         if ((victim[LRU] = lru(ref)) > -1) { /* miss; replace victim */
             frames[LRU][victim[LRU]] = page;
         }
+        /* implied else: hit; do nothing */
 
+        if ((victim[MRU] = mru(ref)) > -1) { /* miss; replace victim */
+            frames[MRU][victim[MRU]] = page;
+        }
+        /* implied else: hit; do nothing */
 
         #ifdef DEBUG
         printf("numrefs: %d | numfaults: %d | page fault ratio: %.3f\n", 
@@ -193,6 +255,8 @@ int main(int argc, char **argv) {
 
     /**
      * @brief stub for printStats();
+     * TODO: updates stats printed
+     * Page Size    # pages     algorithm   page fault ratio
      * 
      */
     printf("numrefs[OPT]: %ld | numfaults[OPT]: %d | page fault ratio[OPT]: %.3f\n", 
@@ -201,6 +265,10 @@ int main(int argc, char **argv) {
     printf("numrefs[LRU]: %ld | numfaults[LRU]: %d | page fault ratio[LRU]: %.3f\n", 
             q->size(), faults[LRU], 
             (((double) faults[LRU]) / ((double) (q->size()))));
+    printf("numrefs[MRU]: %ld | numfaults[MRU]: %d | page fault ratio[MRU]: %.3f\n", 
+            q->size(), faults[MRU], 
+            (((double) faults[MRU]) / ((double) (q->size()))));
+
 
     /* pointer housekeeping */
     delete qmap;
@@ -230,7 +298,7 @@ void printframes(algorithm alg) {
     }
 }
 
-void printAll(multimap<int, pair<int, int>>& r) {
+void printqmap(multimap<int, pair<int, int>>& r) {
     for (const auto& [key, value] : r) {
         printf("[%d]:<%d, %d>\n", key, value.first, value.second);
     }
@@ -284,6 +352,27 @@ int lru(int& ref) {
             victim = lru_victim(frames[LRU]);
         }
         faults[LRU]++;
+    }
+    /* implied else: hit; do nothing */
+
+    return victim;
+}
+
+int mru(int& ref) {
+    int victim = -1;
+    if(isAllocated(ref, frames[MRU]) < 0 ) { /* miss */
+        if (!isFull(frames[MRU])) { /* if there are empty frames */
+            for (int i = 0; i < numframes; i++) { /* populate */
+                if (frames[MRU][i] == -1) {
+                    victim = i;
+                    break;
+                }
+            }
+        }
+        else { /* select a victim */
+            victim = mru_victim(frames[MRU]);
+        }
+        faults[MRU]++;
     }
     /* implied else: hit; do nothing */
 
