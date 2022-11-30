@@ -20,7 +20,18 @@ enum algorithm { FIFO, LRU, MRU, OPT };
 /* page size, # pages, algorithm, fault percentage */
 typedef tuple<int, int, algorithm, long double> record;
 
-int pagesize, numframes;
+/**
+ * @brief nodes for stack/doubly linked list LRU implementation
+ * 
+ */
+struct node {
+    node * prev = nullptr;
+    node * next = nullptr;
+    int id; /* page */
+}   *top, * bottom, *before, 
+    *after, *curr, *temp; 
+
+int pagesize, numframes, numpages;
 int **frames; /* frames[algorithm][numframes] */
 vector<int> * q; /* queue of references */
 
@@ -75,6 +86,12 @@ void printframes(algorithm alg);
  */
 int optimal(int& r, int index);
 
+int lru(int& ref);
+int lru_victim(int * f);
+int mru_victim(int * f);
+
+void updatestack(int page);
+
 /**
  * @brief updates the queuemap data datastructure. removes from map all key:value pairs
  * on the interval [0, index]
@@ -98,6 +115,9 @@ int main(int argc, char **argv) {
     frames = new int*[NUM_ALGS]; 
     for (int i = 0; i < NUM_ALGS; i++) {
         frames[i] = new int[numframes];
+        for (int j = 0; j < numframes; j++) {
+            frames[i][j] = -1;
+        }
     }
 
     int *victim = new int[NUM_ALGS];
@@ -106,9 +126,8 @@ int main(int argc, char **argv) {
     }
 
     cout << "===================" << endl;
-    printf("pageSize: %d | numframes: %d | filename: %s\n", pagesize, numframes, filename);
-    cout << "===================" << endl;
     cout << "reading input file" << endl;
+    cout << "===================" << endl;
 
     /* populate data structures */
     ifstream * in = new ifstream(filename);
@@ -120,13 +139,24 @@ int main(int argc, char **argv) {
         q->push_back(ref);
     }
 
+    /* get number of pages. the key of very last element in qmap is the zero-indexed
+    number of the last page inserted. mathematically, i know that the number of pages is
+        = ceil( largest reference in q / page size)*/
+    auto np = qmap->end();
+    np--;
+    numpages = np->first + 1;
+
     in->close();
 
+    printf("pageSize: %d | numpages: %d | numframes: %d | filename: %s\n", 
+            pagesize, numpages, numframes, filename);
     cout << "===================" << endl;
     
     ref = -1;
+    int page = -1;
     for (int i = 0; i < q->size(); i++){
         ref = (*q)[i];
+        page = getLogicalPage(ref);
 
         #ifdef DEBUG
         printf("ref: %d %s [%d]\n", ref,
@@ -136,14 +166,7 @@ int main(int argc, char **argv) {
         
         if ((victim[OPT] = optimal(ref, i)) > -1) { /* miss; replace victim */
 
-            #ifdef DEBUG
-            printf("victim[OPT]: %d\n", victim[OPT]);
-            cout << "==== hit: frames before ====" << endl;
-            printframes();
-            cout << endl;
-            #endif
-
-            frames[OPT][victim[OPT]] = getLogicalPage(ref);
+            frames[OPT][victim[OPT]] = page;
 
             #ifdef DEBUG
             cout << "==== hit: frames after ====" << endl;
@@ -152,7 +175,10 @@ int main(int argc, char **argv) {
             #endif
         }
 
-        updateqmap(i);
+        if ((victim[LRU] = lru(ref)) > -1) { /* miss; replace victim */
+            frames[LRU][victim[LRU]] = page;
+        }
+
 
         #ifdef DEBUG
         printf("numrefs: %d | numfaults: %d | page fault ratio: %.3f\n", 
@@ -161,13 +187,20 @@ int main(int argc, char **argv) {
         cout << "=============" << endl;
         cout << "=======================" << endl << endl;
         #endif
+        updateqmap(i);
+        updatestack(page);
     }
 
-    cout << "=============" << endl;
+    /**
+     * @brief stub for printStats();
+     * 
+     */
     printf("numrefs[OPT]: %ld | numfaults[OPT]: %d | page fault ratio[OPT]: %.3f\n", 
             q->size(), faults[OPT], 
             (((double) faults[OPT]) / ((double) (q->size()))));
-    cout << "=============" << endl;
+    printf("numrefs[LRU]: %ld | numfaults[LRU]: %d | page fault ratio[LRU]: %.3f\n", 
+            q->size(), faults[LRU], 
+            (((double) faults[LRU]) / ((double) (q->size()))));
 
     /* pointer housekeeping */
     delete qmap;
@@ -236,6 +269,27 @@ void updateqmap(int index) {
     }
 }
 
+int lru(int& ref) {
+    int victim = -1;
+    if(isAllocated(ref, frames[LRU]) < 0 ) { /* miss */
+        if (!isFull(frames[LRU])) { /* if there are empty frames */
+            for (int i = 0; i < numframes; i++) { /* populate */
+                if (frames[LRU][i] == -1) {
+                    victim = i;
+                    break;
+                }
+            }
+        }
+        else { /* select a victim */
+            victim = lru_victim(frames[LRU]);
+        }
+        faults[LRU]++;
+    }
+    /* implied else: hit; do nothing */
+
+    return victim;
+}
+
 int optimal(int& r, int index) {
     int dist_to_next_ref[numframes];
     for (int i = 0; i < numframes; i++) {
@@ -279,4 +333,75 @@ int optimal(int& r, int index) {
     /* implied else: hit; do nothing */
 
     return victim;
+}
+
+void updatestack(int page) {
+    /* search from top. top is MRU, but locality means it's likeley to be on top */
+    if (top != nullptr && bottom != nullptr) { /* if stack not empty */
+        /* find page */
+        curr = top;
+        while (curr != nullptr) {
+            if (curr->id == page) break;
+            curr = curr->next;
+        }
+
+        if (curr != nullptr) { /* if page in stack */
+            if (curr != top) { /* move curr to top */
+                /* get neighbors */
+                before = curr->prev;
+                after = curr->next;
+
+                before->next = after;
+                if (after != nullptr) after->prev = before; /* if curr not last element */
+                if (curr == bottom) bottom = before;
+
+                curr->next = top;
+                curr->prev = nullptr;
+                top->prev = curr;
+                top = curr;
+                curr = before = after = nullptr;
+            }
+        }
+        else { /* add to top */
+            temp = new node();
+            temp->id = page;
+
+            top->prev = temp;
+            temp->next = top;
+            top = temp;
+            temp = nullptr;
+        }
+    }
+    else { /* stack empty; add first element */
+        temp = new node();
+        temp->id = page;
+        top = temp;
+        bottom = temp;
+        temp = nullptr;
+    }
+
+}
+
+int lru_victim(int * f) {
+    curr = bottom;
+    while (curr != nullptr) {
+        for (int i = 0; i < numframes; i++)
+            if (f[i] == curr->id) return i;
+        
+        curr = curr->prev;
+    }
+
+    return -1;
+}
+
+int mru_victim(int * f) {
+    curr = top;
+    while (curr != nullptr) {
+        for (int i = 0; i < numframes; i++)
+            if (f[i] == curr->id) return i;
+        
+        curr = curr->next;
+    }
+
+    return -1;
 }
