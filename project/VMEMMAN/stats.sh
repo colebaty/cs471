@@ -18,7 +18,7 @@ gen_stats () {
                 echo "$i,$j,$n" >> stats.csv # page size, num frames
             done;
         done; 
-    done 
+    done ;
 }
 
 if [[ ! -f sample* ]]; then
