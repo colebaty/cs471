@@ -2,7 +2,7 @@
 
 # automatically compile program and run for given sample values in $p and $f
 # data is stored in file 'samples'
- 
+
 p=(512 1024 2048)
 f=(4 8 12)
 
@@ -18,10 +18,10 @@ gen_stats () {
                 echo "$i,$j,$n" >> stats.csv # page size, num frames
             done;
         done; 
-    done 
+    done ;
 }
 
-if [ ! -f sample* ]; then
+if [[ ! -f sample* ]]; then
     echo "no samples found; generating samples"
     ./run.sh
     gen_stats
