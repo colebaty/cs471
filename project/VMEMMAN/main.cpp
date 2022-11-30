@@ -132,7 +132,7 @@ int mru(int& ref);
 /**
  * @brief returns the index of the frame containing the most-recently used
  * page.  begins searching from top of the stack
- * 
+ *
  * @param f 
  * @return int 
  */
@@ -179,12 +179,6 @@ void updateqmap(int index);
  */
 void updatequeue(int page);
 
-/**
- * @brief pointer/memory deallocation
- * 
- */
-void cleanup();
-
 int main(int argc, char **argv) {
 
     //TODO: make snippet
@@ -211,9 +205,11 @@ int main(int argc, char **argv) {
         victim[i] = -1;
     }
 
+    #ifdef DEBUG
     cout << "===================" << endl;
     cout << "reading input file" << endl;
     cout << "===================" << endl;
+    #endif
 
     /* populate data structures */
     ifstream * in = new ifstream(filename);
@@ -237,9 +233,11 @@ int main(int argc, char **argv) {
 
     in->close();
 
+    #ifdef DEBUG
     printf("pageSize: %d | numpages: %d | numframes: %d | filename: %s\n", 
             pagesize, numpages, numframes, filename);
     cout << "===================" << endl;
+    #endif
     
     ref = -1;
     int page = -1;
@@ -307,14 +305,6 @@ int main(int argc, char **argv) {
             pagesize, numpages, ((double) faults[MRU]) / ((double) (q->size())));
     printf("%d\t\t%d\t\tFIFO\t%.3f\n", 
             pagesize, numpages, ((double) faults[FIFO]) / ((double) (q->size())));
-
-    /* pointer housekeeping */
-    // cleanup();
-    delete qmap;
-    delete q;
-    delete faults;
-    // delete filename;
-    delete in;
 
     return 0;
 }
