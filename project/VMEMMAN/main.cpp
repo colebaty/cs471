@@ -351,32 +351,6 @@ bool isFull(int * frames) {
     return true;
 }
 
-void updateqmap(int index) {
-    multimap<int, pair<int, int>>::iterator search;
-
-    int page = -1;
-    /* remove key:value pairs which are behind the current index */
-    for (int i = 0; i < numframes; i++) {
-        page = frames[OPT][i];
-        #ifdef DEBUG
-        auto printr = qmap->lower_bound(page);
-        while (printr != qmap->upper_bound(page)) {
-            cout << "[" << printr->first << "]: <" 
-                 << printr->second.first << ", " 
-                 << printr->second.second << ">" << endl;
-            printr++;
-        }
-        #endif
-        search = qmap->lower_bound(page);
-        /* while this key has values whose index is 
-        behind the current position in the queue*/
-        while ((search != qmap->end()) && (search->second.first <= index)) {
-            qmap->erase(search);
-            search = qmap->lower_bound(page);
-        }
-    }
-}
-
 int lru(int& ref) {
     int victim = -1;
     if(isAllocated(ref, frames[LRU]) < 0 ) { /* miss */
@@ -531,6 +505,32 @@ void updatestack(int page) {
         temp = nullptr;
     }
 
+}
+
+void updateqmap(int index) {
+    multimap<int, pair<int, int>>::iterator search;
+
+    int page = -1;
+    /* remove key:value pairs which are behind the current index */
+    for (int i = 0; i < numframes; i++) {
+        page = frames[OPT][i];
+        #ifdef DEBUG
+        auto printr = qmap->lower_bound(page);
+        while (printr != qmap->upper_bound(page)) {
+            cout << "[" << printr->first << "]: <" 
+                 << printr->second.first << ", " 
+                 << printr->second.second << ">" << endl;
+            printr++;
+        }
+        #endif
+        search = qmap->lower_bound(page);
+        /* while this key has values whose index is 
+        behind the current position in the queue*/
+        while ((search != qmap->end()) && (search->second.first <= index)) {
+            qmap->erase(search);
+            search = qmap->lower_bound(page);
+        }
+    }
 }
 
 void updatequeue(int page) {
