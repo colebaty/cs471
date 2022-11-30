@@ -420,6 +420,10 @@ void *consumer(void * arg) {
     printf("consumer %d: numempty: %d; numfull: %d\n", id, numempty, numfull);
     #endif
 
+    /* 
+        if we've reached here, all the records have been generated, but there
+        may still be threads waiting for buff_full
+    */
     if(numfull == 0) sem_post(&buff_full);
 
     sem_post(&proceed);
