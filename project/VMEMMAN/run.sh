@@ -3,6 +3,8 @@
 p=(512 1024 2048)
 f=(4 8 12)
 
+echo > samples
+
  for i in ${p[@]}; do 
     for j in ${f[@]}; do 
         echo "=====| p = $i | f = $j |=====" >> samples
