@@ -20,11 +20,16 @@ enum algorithm { FIFO, LRU, MRU, OPT };
 typedef tuple<int, int, algorithm, long double> record;
 
 int pagesize, numframes;
-int * opt_frames; /* optimal page table */
-multimap<int, pair<int, int>> * qmap; /* { page#, { index in q, reference }}*/
+int * frames; /* optimal page table */
 vector<int> * q; /* queue of references */
 
-int opt_faults = 0;
+/**
+ * @brief { page#, { index in q, reference} } 
+ * 
+ */
+multimap<int, pair<int, int>> * qmap;
+
+int * faults = new int[4];
 
 void printAll(multimap<int, pair<int, int>>& r);
 
@@ -48,9 +53,10 @@ int getLogicalPage(const int& r);
 
 /**
  * @brief print page table
+ * page table will be reset as needed between allocation algorithms
  * 
  */
-void printopt_frames();
+void printframes();
 
 /**
  * @brief returns the index to replace in the page table, which may then be
@@ -60,7 +66,7 @@ void printopt_frames();
  * 
  * @param r the memory reference to be processed
  * @param index the index of the currently processed request
- * @return int the index of the frame to replace in opt_frames
+ * @return int the index of the frame to replace in frames
  */
 int optimal(int& r, int index);
 
@@ -84,12 +90,14 @@ int main(int argc, char **argv) {
     numframes = atoi(argv[2]);
     char * filename = argv[3];
 
-    opt_frames = new int[numframes];
+    frames = new int[numframes];
 
+    #ifdef DEBUG
     cout << "===================" << endl;
     printf("pageSize: %d | numframes: %d | filename: %s\n", pagesize, numframes, filename);
     cout << "===================" << endl;
     cout << "reading input file" << endl;
+    #endif
 
     /* populate data structures */
     ifstream * in = new ifstream(filename);
@@ -105,6 +113,8 @@ int main(int argc, char **argv) {
 
     cout << "===================" << endl;
     
+    #ifdef DEBUG
+    #endif
     auto first = qmap->begin();
     auto last = qmap->end();
     last--;
@@ -121,33 +131,33 @@ int main(int argc, char **argv) {
     cout << "===================" << endl;
     printf("allocating first %d even-indexed entries in queue\n", numframes);
     for (int i = 0; i < numframes; i++) {
-        opt_frames[i] = getLogicalPage((*q)[i * 2]);
+        frames[i] = getLogicalPage((*q)[i * 2]);
     }
 
     cout << "===================" << endl;
-    printopt_frames();
+    printframes();
     cout << "===================" << endl;
 
     cout << "testing whether first " << numframes << " queue entries are allocated" << endl
          << " expecting alternating yes/no" << endl;
 
     for (int i = 0; i < numframes; i++ ) {
-        printf("q[%d]: %d %s opt_frames[%d]\n", 
+        printf("q[%d]: %d %s frames[%d]\n", 
                 i, 
                 (*q)[i], 
-                isAllocated((*q)[i], opt_frames) > -1 
+                isAllocated((*q)[i], frames) > -1 
                     ? "hit" 
                     : "miss", 
-                isAllocated((*q)[i], opt_frames)
+                isAllocated((*q)[i], frames)
         );
     }
 
     cout << "===================" << endl;
     cout << "resetting page table(s)" << endl;
-    delete opt_frames;
-    opt_frames = new int[numframes];
+    delete frames;
+    frames = new int[numframes];
     for (int i = 0; i < numframes; i++) {
-        opt_frames[i] = -1;
+        frames[i] = -1;
     }
 
     #ifdef DEBUG
@@ -173,39 +183,39 @@ int main(int argc, char **argv) {
         cout << "=======================" << endl;
         ref = (*q)[i];
         printf("ref: %d %s [%d]\n", ref,
-                isAllocated(ref, opt_frames) < 0 ? "miss" : "hit",
+                isAllocated(ref, frames) < 0 ? "miss" : "hit",
                 getLogicalPage(ref));
         if ((opt_victim = optimal(ref, i)) > -1) { /* miss; replace victim */
             cout << endl;
             printf("opt_victim: %d\n", opt_victim);
-            cout << "==== hit: opt_frames before ====" << endl;
-            printopt_frames();
+            cout << "==== hit: frames before ====" << endl;
+            printframes();
             cout << endl;
-            opt_frames[opt_victim] = getLogicalPage(ref);
-            cout << "==== hit: opt_frames after ====" << endl;
-            printopt_frames();
+            frames[opt_victim] = getLogicalPage(ref);
+            cout << "==== hit: frames after ====" << endl;
+            printframes();
             cout << "=======================" << endl;
         }
 
         updateqmap(i);
 
         printf("numrefs: %d | numfaults: %d | page fault ratio: %.3f\n", 
-                i + 1, opt_faults, 
-                (((double) opt_faults) / ((double) (i + 1))));
+                i + 1, faults[OPT],
+                (((double) faults[OPT]) / ((double) (i + 1))));
         cout << "=============" << endl;
         cout << "=======================" << endl << endl;
     }
 
     cout << "=============" << endl;
     printf("numrefs: %ld | numfaults: %d | page fault ratio: %.3f\n", 
-            q->size(), opt_faults, 
-            (((double) opt_faults) / ((double) (q->size()))));
+            q->size(), faults[OPT], 
+            (((double) faults[OPT]) / ((double) (q->size()))));
     cout << "=============" << endl;
 
     /* pointer housekeeping */
     delete qmap;
     delete q;
-    // delete opt_frames;
+    delete faults;
     // delete filename;
     delete in;
 
@@ -224,9 +234,9 @@ int getLogicalPage(const int& r) {
     return floor((float) r / (float) pagesize);
 }
 
-void printopt_frames() {
+void printframes() {
     for (int i = 0; i < numframes; i++) {
-        printf("opt_frames[%d] = %d\n", i, opt_frames[i]);
+        printf("frames[%d] = %d\n", i, frames[i]);
     }
 }
 
@@ -249,7 +259,7 @@ void updateqmap(int index) {
     int page = -1;
     /* remove key:value pairs which are behind the current index */
     for (int i = 0; i < numframes; i++) {
-        page = opt_frames[i];
+        page = frames[i];
         #ifdef DEBUG
         auto printr = qmap->lower_bound(page);
         while (printr != qmap->upper_bound(page)) {
@@ -278,17 +288,17 @@ int optimal(int& r, int index) {
 
     multimap<int, pair<int, int>>::iterator search;
 
-    if (isAllocated(r, opt_frames) < 0) { /* miss */
-        if (!isFull(opt_frames)) { /* inevitable first n = numframes page faults */
+    if (isAllocated(r, frames) < 0) { /* miss */
+        if (!isFull(frames)) { /* inevitable first n = numframes page faults */
             for (int i = 0; i < numframes; i++)
-                if (opt_frames[i] < 0) {
+                if (frames[i] < 0) {
                     victim = i;
                     break;
                 }
         }
         else {
             for (int i = 0; i < numframes; i++) {
-                search = qmap->lower_bound(opt_frames[i]);
+                search = qmap->lower_bound(frames[i]);
                 if (search != qmap->end()) { /* if there are remaining references in the queue to the allocated page */
                     dist_to_next_ref[i] = search->second.first - index; /* compute the distance between current index and index position of next reference to page */
                 }
@@ -307,7 +317,7 @@ int optimal(int& r, int index) {
             }
         }
 
-        opt_faults++;
+        faults[OPT]++;
     }
     /* implied else: hit; do nothing */
 
