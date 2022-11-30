@@ -1,7 +1,7 @@
- #!/usr/bin/bash
+#!/usr/bin/bash
 
- # automatically compile program and run for given sample values in $p and $f
- # data is stored in file 'samples'
+# automatically compile program and run for given sample values in $p and $f
+# data is stored in file 'samples'
  
 p=(512 1024 2048)
 f=(4 8 12)
