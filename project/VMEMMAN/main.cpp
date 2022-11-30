@@ -29,8 +29,9 @@ struct node {
     node * prev = nullptr;
     node * next = nullptr;
     int id; /* page */
-}   *top, * bottom, *before, 
-    *after, *curr, *temp; 
+}   *curr, * temp, *before, *after, /* manipulators */
+    *top, *bottom, /* stack pointers */
+    *head, *tail;  /* queue pointers */
 
 int pagesize, numframes, numpages;
 int **frames; /* frames[algorithm][numframes] */
@@ -124,7 +125,7 @@ int lru_victim(int * f);
  * recently used page. returns -1 for page hits
  * 
  * @param ref 
- * @return int replacement frame indes; -1 for hits
+ * @return int replacement frame index; -1 for hits
  */
 int mru(int& ref);
 
@@ -138,6 +139,24 @@ int mru(int& ref);
 int mru_victim(int * f);
 
 /**
+ * @brief returns the index of the frame containing the page representing the
+ * reference closest to the head of the input queue. returns -1 for page hits
+ * 
+ * @param f 
+ * @return int replacement frame index; -1 for hits
+ */
+int fifo(int& ref);
+
+/**
+ * @brief returns the index of the frame containing the page representing
+ * the refernce closest to the head of the input.
+ * 
+ * @param f 
+ * @return int 
+ */
+int fifo_victim(int * f);
+
+/**
  * @brief maintains the stack data structure used in both lru and mru algorithms
  * 
  * @param page the referenced page
@@ -145,12 +164,26 @@ int mru_victim(int * f);
 void updatestack(int page);
 
 /**
- * @brief updates the queuemap data datastructure. removes from map all key:value pairs
- * on the interval [0, index]
+ * @brief updates the queuemap data structure. removes from map all 
+ * key:value pairs on the interval [0, index]
  * 
  * @param index 
  */
 void updateqmap(int index);
+
+/**
+ * @brief updates the queue containing the fifo ordering of currently allocated
+ * frames
+ * 
+ * @param index 
+ */
+void updatequeue(int page);
+
+/**
+ * @brief pointer/memory deallocation
+ * 
+ */
+void cleanup();
 
 int main(int argc, char **argv) {
 
@@ -242,6 +275,11 @@ int main(int argc, char **argv) {
         }
         /* implied else: hit; do nothing */
 
+        if ((victim[FIFO] = fifo(ref)) > -1) { /* miss; replace victim */
+            frames[FIFO][victim[FIFO]] = page;
+        }
+        /* implied else: hit; do nothing */
+        
         #ifdef DEBUG
         printf("numrefs: %d | numfaults: %d | page fault ratio: %.3f\n", 
                 i + 1, faults[OPT],
@@ -251,6 +289,7 @@ int main(int argc, char **argv) {
         #endif
         updateqmap(i);
         updatestack(page);
+        updatequeue(page);
     }
 
     /**
@@ -259,18 +298,18 @@ int main(int argc, char **argv) {
      * Page Size    # pages     algorithm   page fault ratio
      * 
      */
-    printf("numrefs[OPT]: %ld | numfaults[OPT]: %d | page fault ratio[OPT]: %.3f\n", 
-            q->size(), faults[OPT], 
-            (((double) faults[OPT]) / ((double) (q->size()))));
-    printf("numrefs[LRU]: %ld | numfaults[LRU]: %d | page fault ratio[LRU]: %.3f\n", 
-            q->size(), faults[LRU], 
-            (((double) faults[LRU]) / ((double) (q->size()))));
-    printf("numrefs[MRU]: %ld | numfaults[MRU]: %d | page fault ratio[MRU]: %.3f\n", 
-            q->size(), faults[MRU], 
-            (((double) faults[MRU]) / ((double) (q->size()))));
-
+    printf("Page size\t# of pages\tALG\tpage fault ratio (0 <= p <= 1)\n");
+    printf("%d\t\t%d\t\tOPT\t%.3f\n", 
+            pagesize, numpages, ((double) faults[OPT]) / ((double) (q->size())));
+    printf("%d\t\t%d\t\tLRU\t%.3f\n", 
+            pagesize, numpages, ((double) faults[LRU]) / ((double) (q->size())));
+    printf("%d\t\t%d\t\tMRU\t%.3f\n", 
+            pagesize, numpages, ((double) faults[MRU]) / ((double) (q->size())));
+    printf("%d\t\t%d\t\tFIFO\t%.3f\n", 
+            pagesize, numpages, ((double) faults[FIFO]) / ((double) (q->size())));
 
     /* pointer housekeeping */
+    // cleanup();
     delete qmap;
     delete q;
     delete faults;
@@ -379,6 +418,28 @@ int mru(int& ref) {
     return victim;
 }
 
+int fifo(int& ref) {
+    int victim = -1;
+    if(isAllocated(ref, frames[FIFO]) < 0 ) { /* miss */
+        if (!isFull(frames[FIFO])) { /* if there are empty frames */
+            for (int i = 0; i < numframes; i++) { /* populate */
+                if (frames[FIFO][i] == -1) {
+                    victim = i;
+                    break;
+                }
+            }
+        }
+        else { /* select a victim */
+            victim = fifo_victim(frames[FIFO]);
+        }
+        faults[FIFO]++;
+    }
+    /* implied else: hit; do nothing */
+
+    return victim;
+}
+
+
 int optimal(int& r, int index) {
     int dist_to_next_ref[numframes];
     for (int i = 0; i < numframes; i++) {
@@ -469,6 +530,49 @@ void updatestack(int page) {
         temp = nullptr;
     }
 
+}
+
+void updatequeue(int page) {
+    if (head != nullptr && tail != nullptr) { /* if queue not empty */
+        curr = head;
+        while (curr != nullptr) { /* find page */
+            if (curr->id == page) { /* page already in queue */
+                curr = nullptr; /* reset pointer */
+                return;
+            }
+            curr = curr->next;
+        }
+
+        if (curr == nullptr) { /* page not found; add to tail */
+            temp = new node();
+            temp->id = page;
+            tail->next = temp;
+            temp->prev = tail;
+            tail = temp;
+            temp = nullptr;
+        }
+        /* implied else; page already in queue; do nothing */
+    }
+    else { /* queue empty; add first node */
+        temp = new node();
+        temp->id = page;
+        head = temp;
+        tail = temp;
+        temp = nullptr;
+    }
+
+}
+
+int fifo_victim(int * f) {
+    curr = head;
+    while (curr != nullptr) {
+        for (int i = 0; i < numframes; i++)
+            if (f[i] == curr->id) return i;
+        
+        curr = curr->next;
+    }
+
+    return -1;
 }
 
 int lru_victim(int * f) {
