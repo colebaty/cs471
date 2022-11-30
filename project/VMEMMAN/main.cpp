@@ -271,15 +271,15 @@ int main(int argc, char **argv) {
      * Page Size    # pages     algorithm   page fault ratio
      * 
      */
-    printf("numrefs[OPT]: %ld | numfaults[OPT]: %d | page fault ratio[OPT]: %.3f\n", 
-            q->size(), faults[OPT], 
-            (((double) faults[OPT]) / ((double) (q->size()))));
-    printf("numrefs[LRU]: %ld | numfaults[LRU]: %d | page fault ratio[LRU]: %.3f\n", 
-            q->size(), faults[LRU], 
-            (((double) faults[LRU]) / ((double) (q->size()))));
-    printf("numrefs[MRU]: %ld | numfaults[MRU]: %d | page fault ratio[MRU]: %.3f\n", 
-            q->size(), faults[MRU], 
-            (((double) faults[MRU]) / ((double) (q->size()))));
+    printf("page size\t# pages\t\tALG\t\tpage fault ratio (0 <= p <= 1)\n");
+    printf("%d\t\t%d\t\tOPT\t\t%.3f\n", 
+            pagesize, numpages, ((double) faults[OPT]) / ((double) (q->size())));
+    printf("%d\t\t%d\t\tLRU\t\t%.3f\n", 
+            pagesize, numpages, ((double) faults[LRU]) / ((double) (q->size())));
+    printf("%d\t\t%d\t\tMRU\t\t%.3f\n", 
+            pagesize, numpages, ((double) faults[MRU]) / ((double) (q->size())));
+    printf("%d\t\t%d\t\tFIFO\t\t%.3f\n", 
+            pagesize, numpages, ((double) faults[FIFO]) / ((double) (q->size())));
 
 
     return 0;
