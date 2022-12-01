@@ -6,12 +6,16 @@
 p=(512 1024 2048)
 f=(4 8 12)
 
-modsecs=$(date --reference=main +%s)
-nowsecs=$(date +%s)
-delta=$(($nowsecs - $modsecs))
-
-if [[ ! -f main ||  $delta -gt 900 ]]; then # refresh every 15 min
-    echo "executable too old or not found; compiling"
+if [ -f main ]; then
+    modsecs=$(date --reference=main +%s)
+    nowsecs=$(date +%s)
+    delta=$(($nowsecs - $modsecs))
+    if [ $delta -gt 900 ]; then
+        echo "executable too old or not found; compiling"
+        g++ -fpermissive -std=c++17 -g main.cpp -o main
+    fi
+else
+    echo "executable not found; compiling"
     g++ -fpermissive -std=c++17 -g main.cpp -o main
 fi
 

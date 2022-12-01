@@ -21,11 +21,11 @@ gen_stats () {
     done ;
 }
 
-if [[ ! -f sample* ]]; then
-    echo "no samples found; generating samples"
-    ./run.sh
+if ls sample* >/dev/null 2>&1; then
     gen_stats
 else
+    echo "no samples found; generating samples"
+    ./run.sh
     gen_stats
 fi
 
