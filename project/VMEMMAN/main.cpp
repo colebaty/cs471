@@ -224,6 +224,10 @@ int main(int argc, char **argv) {
 
     /* populate data structures */
     ifstream * in = new ifstream(filename);
+    if (!*in) {
+        fprintf(stderr, "error: file %s not found\n", filename);
+        return -1;
+    }
     qmap = new multimap<int, pair<int, int>>();
     q = new vector<int>();
     int ref;
