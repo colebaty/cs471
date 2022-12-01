@@ -7,7 +7,7 @@ p=(512 1024 2048)
 f=(4 8 12)
 
 gen_stats () {
-    echo "exporting sample data to samples.csv"
+    echo "exporting sample data to stats.csv"
 
     echo "p,f,num pgs,alg,fault ratio" > stats.csv
 
