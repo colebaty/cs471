@@ -68,8 +68,8 @@ int * faults = new int[4];
 void printqmap(multimap<int, pair<int, int>>& r);
 
 /**
- * @brief returns the page table index if the referenced address is contained on a page 
- * which is allocated to the page table. returns -1 otherwise
+ * @brief returns the page table index if the referenced address is contained 
+ * on a page which is allocated to the page table. returns -1 otherwise
  * 
  * @param r 
  * @return int 
@@ -238,8 +238,8 @@ int main(int argc, char **argv) {
         mathematically, i know that the number of pages is
             = ceil( largest reference in q / page size)
     */
-    auto np = qmap->end();
-    np--;
+    auto np = qmap->end(); /* one-past-last element */
+    np--;/* move "back" one to last element */
     numpages = np->first + 1;
 
     in->close();
@@ -268,7 +268,7 @@ int main(int argc, char **argv) {
 
             #ifdef DEBUG
             cout << "==== hit: frames after ====" << endl;
-            printframes();
+            printframes(OPT);
             cout << "=======================" << endl;
             #endif
         }
@@ -276,16 +276,31 @@ int main(int argc, char **argv) {
 
         if ((victim[LRU] = lru(ref)) > -1) { /* miss; replace victim */
             frames[LRU][victim[LRU]] = page;
+            #ifdef DEBUG
+            cout << "==== hit: frames after ====" << endl;
+            printframes(LRU);
+            cout << "=======================" << endl;
+            #endif
         }
         /* implied else: hit; do nothing */
 
         if ((victim[MRU] = mru(ref)) > -1) { /* miss; replace victim */
             frames[MRU][victim[MRU]] = page;
+            #ifdef DEBUG
+            cout << "==== hit: frames after ====" << endl;
+            printframes(MRU);
+            cout << "=======================" << endl;
+            #endif
         }
         /* implied else: hit; do nothing */
 
         if ((victim[FIFO] = fifo(ref)) > -1) { /* miss; replace victim */
             frames[FIFO][victim[FIFO]] = page;
+            #ifdef DEBUG
+            cout << "==== hit: frames after ====" << endl;
+            printframes(FIFO);
+            cout << "=======================" << endl;
+            #endif
         }
         /* implied else: hit; do nothing */
         
@@ -309,13 +324,17 @@ int main(int argc, char **argv) {
      */
     printf("Page size\t# of pages\tALG\tpage fault ratio (0 <= p <= 1)\n");
     printf("%d\t\t%d\t\tOPT\t%.3f\n", 
-            pagesize, numpages, ((double) faults[OPT]) / ((double) (q->size())));
+            pagesize, numpages, 
+            ((double) faults[OPT]) / ((double) (q->size())));
     printf("%d\t\t%d\t\tLRU\t%.3f\n", 
-            pagesize, numpages, ((double) faults[LRU]) / ((double) (q->size())));
+            pagesize, numpages, 
+            ((double) faults[LRU]) / ((double) (q->size())));
     printf("%d\t\t%d\t\tMRU\t%.3f\n", 
-            pagesize, numpages, ((double) faults[MRU]) / ((double) (q->size())));
+            pagesize, numpages, 
+            ((double) faults[MRU]) / ((double) (q->size())));
     printf("%d\t\t%d\t\tFIFO\t%.3f\n", 
-            pagesize, numpages, ((double) faults[FIFO]) / ((double) (q->size())));
+            pagesize, numpages, 
+            ((double) faults[FIFO]) / ((double) (q->size())));
 
     return 0;
 }
@@ -349,6 +368,63 @@ bool isFull(int * frames) {
         if (frames[i] < 0) return false;
     }
     return true;
+}
+
+int optimal(int& r, int index) {
+    int dist_to_next_ref[numframes];
+    for (int i = 0; i < numframes; i++) {
+        dist_to_next_ref[i] = -1;
+    }
+    int victim = -1;
+
+    multimap<int, pair<int, int>>::iterator search;
+
+    if (isAllocated(r, frames[OPT]) < 0) { /* miss */
+        if (!isFull(frames[OPT])) { /* inevitable first numframes page faults */
+            for (int i = 0; i < numframes; i++)
+                if (frames[OPT][i] < 0) {
+                    victim = i;
+                    break;
+                }
+        }
+        else {
+            for (int i = 0; i < numframes; i++) {
+                search = qmap->lower_bound(frames[OPT][i]);
+                /* 
+                    if there are remaining references in the queue to the 
+                    allocated page 
+                */
+                if (search != qmap->end()) { 
+                    /* 
+                        compute the distance between current index and index 
+                        position of next reference to page 
+                    */
+                    dist_to_next_ref[i] = search->second.first - index; 
+                }
+                /* 
+                    all pages currently allocated to a frame are no longer 
+                    needed 
+                */
+                else { 
+                    return index % numframes; /* can be any frame */
+                }
+            }
+
+            int max = -1;
+
+            for (int i = 0;  i < numframes; i++) {
+                if (dist_to_next_ref[i] > max) {
+                    max = std::max(max, dist_to_next_ref[i]);
+                    victim = i;
+                }
+            }
+        }
+
+        faults[OPT]++;
+    }
+    /* implied else: hit; do nothing */
+
+    return victim;
 }
 
 int lru(int& ref) {
@@ -415,53 +491,10 @@ int fifo(int& ref) {
 }
 
 
-int optimal(int& r, int index) {
-    int dist_to_next_ref[numframes];
-    for (int i = 0; i < numframes; i++) {
-        dist_to_next_ref[i] = -1;
-    }
-    int victim = -1;
-
-    multimap<int, pair<int, int>>::iterator search;
-
-    if (isAllocated(r, frames[OPT]) < 0) { /* miss */
-        if (!isFull(frames[OPT])) { /* inevitable first n = numframes page faults */
-            for (int i = 0; i < numframes; i++)
-                if (frames[OPT][i] < 0) {
-                    victim = i;
-                    break;
-                }
-        }
-        else {
-            for (int i = 0; i < numframes; i++) {
-                search = qmap->lower_bound(frames[OPT][i]);
-                if (search != qmap->end()) { /* if there are remaining references in the queue to the allocated page */
-                    dist_to_next_ref[i] = search->second.first - index; /* compute the distance between current index and index position of next reference to page */
-                }
-                else { /* all pages currently allocated to a frame are no longer needed */
-                    return index % numframes; /* can be any frame */
-                }
-            }
-
-            int max = -1;
-
-            for (int i = 0;  i < numframes; i++) {
-                if (dist_to_next_ref[i] > max) {
-                    max = std::max(max, dist_to_next_ref[i]);
-                    victim = i;
-                }
-            }
-        }
-
-        faults[OPT]++;
-    }
-    /* implied else: hit; do nothing */
-
-    return victim;
-}
-
 void updatestack(int page) {
-    /* search from top. top is MRU, but locality means it's likeley to be on top */
+    /*  search from top. top is MRU, but locality means it's likeley to be on 
+        top 
+    */
     if (top != nullptr && bottom != nullptr) { /* if stack not empty */
         /* find page */
         curr = top;
@@ -477,7 +510,8 @@ void updatestack(int page) {
                 after = curr->next;
 
                 before->next = after;
-                if (after != nullptr) after->prev = before; /* if curr not last element */
+                /* if curr not last element */
+                if (after != nullptr) after->prev = before; 
                 if (curr == bottom) bottom = before;
 
                 curr->next = top;
