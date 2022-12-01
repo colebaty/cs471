@@ -586,7 +586,11 @@ void updatequeue(int page) {
             tail = temp;
             temp = nullptr;
         }
-        /* implied else; page already in queue; do nothing */
+        else { /* hit: remove the page at the head of the queue */
+            temp = head;
+            head = head->next;
+            delete temp;
+        }
     }
     else { /* queue empty; add first node */
         temp = new node();
@@ -599,15 +603,23 @@ void updatequeue(int page) {
 }
 
 int fifo_victim(int * f) {
-    curr = head;
-    while (curr != nullptr) {
-        for (int i = 0; i < numframes; i++)
-            if (f[i] == curr->id) return i;
-        
-        curr = curr->next;
+    int victim = -1;
+
+    if (head != nullptr) {
+        for (int i = 0; i < numframes; i++) {
+            if (f[i] == head->id) {
+                victim = i;
+                break;
+            }
+        }
     }
 
-    return -1;
+    temp = head;
+    head = head->next;
+    head->prev = nullptr;
+    delete temp;
+
+    return victim;
 }
 
 int lru_victim(int * f) {
