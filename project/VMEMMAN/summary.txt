@@ -1,0 +1,45 @@
+Page size	# of pages	ALG	page fault ratio (0 <= p <= 1)
+1024		98		OPT	0.023
+1024		98		LRU	0.036
+1024		98		MRU	0.773
+1024		98		FIFO	0.036
+Page size	# of pages	ALG	page fault ratio (0 <= p <= 1)
+1024		98		OPT	0.383
+1024		98		LRU	0.605
+1024		98		MRU	0.860
+1024		98		FIFO	0.614
+Page size	# of pages	ALG	page fault ratio (0 <= p <= 1)
+1024		98		OPT	0.107
+1024		98		LRU	0.228
+1024		98		MRU	0.810
+1024		98		FIFO	0.236
+Page size	# of pages	ALG	page fault ratio (0 <= p <= 1)
+2048		49		OPT	0.010
+2048		49		LRU	0.018
+2048		49		MRU	0.604
+2048		49		FIFO	0.018
+Page size	# of pages	ALG	page fault ratio (0 <= p <= 1)
+2048		49		OPT	0.141
+2048		49		LRU	0.260
+2048		49		MRU	0.734
+2048		49		FIFO	0.267
+Page size	# of pages	ALG	page fault ratio (0 <= p <= 1)
+2048		49		OPT	0.015
+2048		49		LRU	0.019
+2048		49		MRU	0.663
+2048		49		FIFO	0.019
+Page size	# of pages	ALG	page fault ratio (0 <= p <= 1)
+512		196		OPT	0.205
+512		196		LRU	0.421
+512		196		MRU	0.890
+512		196		FIFO	0.430
+Page size	# of pages	ALG	page fault ratio (0 <= p <= 1)
+512		196		OPT	0.574
+512		196		LRU	0.800
+512		196		MRU	0.931
+512		196		FIFO	0.804
+Page size	# of pages	ALG	page fault ratio (0 <= p <= 1)
+512		196		OPT	0.344
+512		196		LRU	0.601
+512		196		MRU	0.915
+512		196		FIFO	0.610
