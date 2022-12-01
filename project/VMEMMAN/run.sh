@@ -11,7 +11,7 @@ if [ -f main ]; then
     nowsecs=$(date +%s)
     delta=$(($nowsecs - $modsecs))
     if [ $delta -gt 900 ]; then
-        echo "executable too old or not found; compiling"
+        echo "executable too old; compiling"
         g++ -fpermissive -std=c++17 -g main.cpp -o main
     fi
 else
