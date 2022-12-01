@@ -1,13 +1,17 @@
- #!/usr/bin/bash
+#!/usr/bin/bash
 
- # automatically compile program and run for given sample values in $p and $f
- # data is stored in file 'samples'
+# automatically compile program and run for given sample values in $p and $f
+# data is stored in file 'samples'
  
 p=(512 1024 2048)
 f=(4 8 12)
 
-if [ ! -f main ]; then
-    echo "executable not found; compiling"
+modsecs=$(date --reference=main +%s)
+nowsecs=$(date +%s)
+delta=$(($nowsecs - $modsecs))
+
+if [[ ! -f main ||  $delta -gt 900 ]]; then # refresh every 15 min
+    echo "executable too old or not found; compiling"
     g++ -fpermissive -std=c++17 -g main.cpp -o main
 fi
 
