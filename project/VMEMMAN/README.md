@@ -31,12 +31,32 @@ It will compile the program if there is no executable named `main` in the
 same directory. It will also compile the program if the `main` binary in the
 same directory is older than 15 minutes.
 
+This script must be run with an input file named `input` in the same directory.
+The provided `input` file is simply a copy of the Sample input provided with
+the project instructions.
+
+```
+# to run this script
+./run.sh
+
+# to set executable permissions (if needed)
+chmod 755 *.sh
+```
+
 ## `stats.sh`
 This script compiles the data from the sample runs into a file named `stats.csv`
 for import into spreadsheet applications for further analysis.  
 
 If there are no samples in the current directory, the script calls `run.sh` to
 generate samples, and then compiles them into the csv file `stats.csv`
+
+```
+# to run this script
+./stats.sh
+
+# to set executable permissions (if needed)
+chmod 755 *.sh
+```
 
 ## Compiling and Running
 
@@ -47,35 +67,17 @@ g++ -fpermissive -std=c++17 -g main.cpp -o main
 
 To run the program for a given set of inputs, see below.
 ```bash
-./prodcons <p> <c> <b>
+./main <p> <f> <input file>
 
 # provided below are commands to run each of the possible combinations
-# of producer, consumer, and buffer size
-./prodcons 2 2 5
-./prodcons 2 2 10
-./prodcons 2 2 10
-./prodcons 2 5 5
-./prodcons 2 5 10
-./prodcons 2 5 10
-./prodcons 2 10 5
-./prodcons 2 10 10
-./prodcons 2 10 10
-./prodcons 5 2 5
-./prodcons 5 2 10
-./prodcons 5 2 10
-./prodcons 5 5 5
-./prodcons 5 5 10
-./prodcons 5 5 10
-./prodcons 5 10 5
-./prodcons 5 10 10
-./prodcons 5 10 10
-./prodcons 10 2 5
-./prodcons 10 2 10
-./prodcons 10 2 10
-./prodcons 10 5 5
-./prodcons 10 5 10
-./prodcons 10 5 10
-./prodcons 10 10 5
-./prodcons 10 10 10
-./prodcons 10 10 10
+# of page size and frame size, with the input file `input`
+./main 512 4 input
+./main 512 8 input
+./main 512 12 input
+./main 1024 4 input
+./main 1024 8 input
+./main 1024 12 input
+./main 2048 4 input
+./main 2048 8 input
+./main 2048 12 input
 ```

@@ -30,10 +30,25 @@ is the buffer size.
 It will compile the program if there is no executable named `prodcons` in the 
 same directory.
 
+```
+# to run this script
+./run.sh
+
+# to set executable permissions (if needed)
+chmod 755 *.sh
+```
+
 ## `stats.sh`
 This script compiles the data from the sample runs into a file named `stats.csv`
 for import into spreadsheet applications for further analysis.  
 
+```
+# to run this script
+./stats.sh
+
+# to set executable permissions (if needed)
+chmod 755 *.sh
+```
 ## Compiling and Running
 
 To compile manually from source code, run this command.
