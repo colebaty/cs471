@@ -45,11 +45,24 @@ struct node {
     *head, *tail;  /* queue pointers */
 
 int pagesize, numframes, numpages;
-int **frames; /* frames[algorithm][numframes] */
-vector<int> * q; /* queue of references */
+/**
+ * @brief frames[algorithm][numframes] 
+ * 
+ */
+int **frames; 
 
 /**
- * @brief { page#, { index in q, reference} }. this 
+ * @brief queue of references
+ * 
+ */
+vector<int> * q;
+
+/**
+ * @brief { page#, { index in q, reference} }. keyed on page numbers. this was
+ * chosen to exploit the property of multimaps that items with the same key
+ * are partitioned together in the order they were inserted. this means that
+ * each partition is effectively a FIFO queue, the head of which can be reached
+ * in O(log n) by a call to qmap->lower_bound(page).
  * 
  */
 multimap<int, pair<int, int>> * qmap;
