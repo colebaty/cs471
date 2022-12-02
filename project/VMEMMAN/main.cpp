@@ -49,7 +49,7 @@ int **frames; /* frames[algorithm][numframes] */
 vector<int> * q; /* queue of references */
 
 /**
- * @brief { page#, { index in q, reference} } 
+ * @brief { page#, { index in q, reference} }. this 
  * 
  */
 multimap<int, pair<int, int>> * qmap;
