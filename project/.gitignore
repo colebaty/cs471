@@ -9,3 +9,6 @@ sample*
 *.csv
 doc
 *.zip
+Doxyfile.*
+doxygen-
+doxygen-*
