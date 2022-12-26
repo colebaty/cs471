@@ -9,5 +9,6 @@ challenged myself to implement some of the techniques described in the textbook
 (Silberschatz, etc.). Two of the most challenging implementations are linked
 below; please have a look!
 
+* [Homework X - TAILQ macros in C]()
 * [Homework 6 - Least Recently Used](hw6/)
-* [Final project]()
+* [Final project](project/)
