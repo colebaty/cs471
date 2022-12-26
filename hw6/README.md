@@ -3,9 +3,11 @@
 
 ## Homework 6 - Problem Description
 
-## Research
+In this assignment, we were tasked to write a program implementing the least
+recently used (LRU) page-replacement algorithm. We were given a string of page 
+references for a process, as well as sample output.
 
-## Implementation
+## Research
 
 In the discussion of the LRU page-replacement algorithm, the textbook authors
 describe an implementation using a stack:
@@ -27,6 +29,8 @@ struct node {
     }   *top, * bottom, *before,
         *after, *curr, *temp;
 ```
+
+## Implementation
 
 The heavy lifting in this program is done by the functions `lru` and `ref` -
 please see the [source code](lru.cpp) for more details!
