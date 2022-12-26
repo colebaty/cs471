@@ -9,5 +9,5 @@ challenged myself to implement some of the techniques described in the textbook
 (Silberschatz, etc.). Two of the most challenging implementations are linked
 below; please have a look!
 
-* [Homework 6 - Least Recently Used]()
+* [Homework 6 - Least Recently Used](hw6/)
 * [Final project]()
