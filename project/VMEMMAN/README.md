@@ -34,7 +34,7 @@ memory references; therefore, implementing the optimal replacement algorithm
 serves to provide a "perfect world" baseline aganst which to compare the other
 three algorithms.
 
-[FIFO]() and [LRU]() were implemented in previous homework assignments, and so
+[FIFO](../../hw2) and [LRU](../../hw6) were implemented in previous homework assignments, and so
 were easily adapted to this assignment. For MRU, I used the same doubly-linked
 stack structure as LRU, which did not require much modification.
 
