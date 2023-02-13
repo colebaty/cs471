@@ -4,8 +4,8 @@
 ## Homework 6 - Problem Description
 
 In this assignment, we were tasked to write a program implementing the least
-recently used (LRU) page-replacement algorithm. We were given a string of page 
-references for a process, as well as sample output.
+recently used (LRU) page-replacement algorithm for demand paging of memory. We 
+were given a string of page references for a process, as well as sample output.
 
 ## Research
 
