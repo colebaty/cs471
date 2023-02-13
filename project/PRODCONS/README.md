@@ -1,92 +1,45 @@
 # PRODCONS
-
-## Cole Baty and Amelia Ragsdale
-
 ### for CS471, Dr. Ravi Mukkamala, Fall 2022, Old Dominion University
 
-## Requirements
+A thread-based implementation of the classic [producer-consumer
+problem](https://en.wikipedia.org/wiki/Producer%E2%80%93consumer_problem).
+There are a finite number of producers and consumers who share a common buffer
+of finite size. Producers deposit a resource into the shared buffer, from which 
+consumers draw resources.  A producer may only deposit to empty slots in the
+buffer, and consumers may only draw from occupied slots in the buffer.
 
-This program was developed and tested on the following operating systems:
-
-* Ubuntu >= 20.04 (5.4.0) (ODU CS Linux server)
-* g++ >= 9.4.0 (ODU CS Linux server)
-
-All binaries and shell scripts included in these folders were tested on the ODU 
-CS Department Linux servers on December 2, 2022, where their intended behavior 
-was observed.
-
-## Scripts
-
-The following scripts are provided to aid in automatically compiling and running
-the program.
-
-## `run.sh`
-
-This script will run the program for each of the values given in the
-instructions, placing the output of each run in a file named `sample-p-c-b`,
-where `p` is the number of producers, `c` is the number of consumers, and `b` 
-is the buffer size.  
-
-It will compile the program if there is no executable named `prodcons` in the 
-same directory.
+We were required to implement this with a thread library of our choosing. The
+instructions specified that we were to compare runtimes with each of the following
+parameters:
 
 ```
-# to run this script
-./run.sh
-
-# to set executable permissions (if needed)
-chmod 755 *.sh
+Number of producers     Number of consumers     Buffer size
+2                       2                       5
+5                       5                       10
+10                      10                      100
 ```
 
-## `stats.sh`
-This script compiles the data from the sample runs into a file named `stats.csv`
-for import into spreadsheet applications for further analysis.  
+That is, run the program with 2 producer threads, 2 consumer threads, and a
+buffer size of 5.  Then run the program with 2 producer threads, 2 consumer
+threads, and a buffer size of 10.  Then, <2, 2, 100>, <5, 2, 5>, <5, 2, 10>,
+and so on.
 
-```
-# to run this script
-./stats.sh
+## Threading
 
-# to set executable permissions (if needed)
-chmod 755 *.sh
-```
-## Compiling and Running
+I chose to implement this in C++ but using the C
+[`pthreads`](https://man7.org/linux/man-pages/man7/pthreads.7.html) and
+[`semaphore`](https://man7.org/linux/man-pages/man7/sem_overview.7.html)
+libraries.  While the C++20 standard does provide support for
+[semaphores](https://en.cppreference.com/w/cpp/thread\#Semaphores), these were
+incompatible with the project because the number of required sempahores was not
+able to be declared dynamically. Thread management was (somehow) also more
+easily acomplished with the `pthreads` library.
 
-To compile manually from source code, run this command.
-```bash
-g++ -g -std=c++17 -o prodcons -fpermissive -fdiagnostics-color=always main.cpp -lpthread
-```
+## Scripting
+For ease of sample collection (and also for grading purposes) I included two
+short scripts:
+- `run.sh`: compiles the program if needed; runs all prescribed samples, saving
+  each sample run to its own output file
+- `stats.sh`: collects the data from each sample and consolidates it into a
+  `.csv` file for further analysis
 
-To run the program for a given set of inputs, see below.
-```bash
-./prodcons <p> <c> <b>
-
-# provided below are commands to run each of the possible combinations
-# of producer, consumer, and buffer size
-./prodcons 2 2 5
-./prodcons 2 2 10
-./prodcons 2 2 10
-./prodcons 2 5 5
-./prodcons 2 5 10
-./prodcons 2 5 10
-./prodcons 2 10 5
-./prodcons 2 10 10
-./prodcons 2 10 10
-./prodcons 5 2 5
-./prodcons 5 2 10
-./prodcons 5 2 10
-./prodcons 5 5 5
-./prodcons 5 5 10
-./prodcons 5 5 10
-./prodcons 5 10 5
-./prodcons 5 10 10
-./prodcons 5 10 10
-./prodcons 10 2 5
-./prodcons 10 2 10
-./prodcons 10 2 10
-./prodcons 10 5 5
-./prodcons 10 5 10
-./prodcons 10 5 10
-./prodcons 10 10 5
-./prodcons 10 10 10
-./prodcons 10 10 10
-```
