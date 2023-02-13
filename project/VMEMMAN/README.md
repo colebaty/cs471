@@ -40,7 +40,7 @@ stack structure as LRU, which did not require much modification.
 
 ### Optimal
 
-For the optimal replacement algorithm, I chose the [`multimap`]() from the C++
+For the optimal replacement algorithm, I chose the [`multimap`](https://en.cppreference.com/w/cpp/container/multimap) from the C++
 STL:
 
 ```C++
