@@ -5,7 +5,7 @@ for processes arriving into the system.  This is also known as a first-in,
 first-out (FIFO) queue.
 
 I was familiar with queues from previous coursework, especially [CS 361 Data 
-Structures and Algorithms](https://githhub.com/colebaty/cs361). But I hadn't yet done much in C and 
+Structures and Algorithms](https://github.com/colebaty/cs361). But I hadn't yet done much in C and 
 I wanted to explore that.
 
 The implementation of this program was accomplished mainly by following the
