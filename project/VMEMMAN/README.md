@@ -48,6 +48,6 @@ This means that each partition is effectively a FIFO queue, the head of which ca
 reached in O(log n) by a call to `qmap->lower_bound(page)`.
 
 ## Scripts
-As in [PRODCONS](../prodcons/), I provided two scripts to help with
+As in [PRODCONS](../PRODCONS/), I provided two scripts to help with
 compilation, running the program, collecting samples, and converting the sample
 data to a CSV file for further analysis in spreadsheet applications.
