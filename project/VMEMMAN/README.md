@@ -2,6 +2,7 @@
 
 ### for CS471, Dr. Ravi Mukkamala, Fall 2022, Old Dominion Univrsity
 
+## Background information
 In this project, we were tasked to implement four different demand paging
 replacement algorithms.
 
@@ -27,6 +28,7 @@ implement and compare the following four algorithms:
   recently
 * Optimal - replace the page that will not be used for the longest time
 
+## Implementation
 Obviously, the optimal replacement algorithm requires foreknowledge of the
 memory references; therefore, implementing the optimal replacement algorithm
 serves to provide a "perfect world" baseline aganst which to compare the other
@@ -36,7 +38,7 @@ three algorithms.
 were easily adapted to this assignment. For MRU, I used the same doubly-linked
 stack structure as LRU, which did not require much modification.
 
-## Optimal
+### Optimal
 
 For the optimal replacement algorithm, I chose the [`multimap`]() from the C++
 STL:
@@ -52,3 +54,8 @@ STL:
  */
 
 ```
+
+## Scripts
+As in [PRODCONS](../prodcons/), I provided two scripts to help with
+compilation, running the program, collecting samples, and converting the sample
+data to a CSV file for further analysis in spreadsheet applications.
