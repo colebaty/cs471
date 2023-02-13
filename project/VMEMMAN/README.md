@@ -1,83 +1,54 @@
-# PRODCONS
-
-## Cole Baty and Amelia Ragsdale
+# VMEMMAN
 
 ### for CS471, Dr. Ravi Mukkamala, Fall 2022, Old Dominion Univrsity
 
-## Requirements
+In this project, we were tasked to implement four different demand paging
+replacement algorithms.
 
-This program was developed and tested on the following operating systems:
+In the virtual memory model, program memory is partitioned into equally-sized
+blocks of memory, called pages.  The size of the pages may vary.  Because 
+physical memory is finite, it is not necessary to load an entire program into
+memory; rather, only the pages containing memory being actively worked on are
+loaded into 'frames' of physical memory, with the unneeded parts being written
+to successively lower cache levels for retrieval.
 
-* Ubuntu >= 20.04 (5.4.0) (ODU CS Linux server)
-* g++ >= 9.4.0 (ODU CS Linux server)
+However, this means that there will inevitably be a page fault when a requested
+memory address is not currently loaded into a physical frame on the machine. In
+this situation, the correct page must be retrieved from storage, which is a
+costly, time-intensive operation.
 
-All binaries and shell scripts included in these folders were tested on the ODU 
-CS Department Linux servers on December 2, 2022, where their intended behavior 
-was observed.
+Thus the incentive to optimize a page replacement algorithm.  We were tasked to
+implement and compare the following four algorithms:
+* First in, first out (FIFO) - replace the page which arrived first in the
+  queue
+* Least recently used (LRU) - replace the page which has not been referenced
+  for the longest time
+* Most recently used (MRU) - replace the page which has been referenced most
+  recently
+* Optimal - replace the page that will not be used for the longest time
 
-## Scripts
+Obviously, the optimal replacement algorithm requires foreknowledge of the
+memory references; therefore, implementing the optimal replacement algorithm
+serves to provide a "perfect world" baseline aganst which to compare the other
+three algorithms.
 
-The following scripts are provided to aid in automatically compiling and running
-the program.
+[FIFO]() and [LRU]() were implemented in previous homework assignments, and so
+were easily adapted to this assignment. For MRU, I used the same doubly-linked
+stack structure as LRU, which did not require much modification.
 
-## `run.sh`
+## Optimal
 
-This script will run the program for each of the values given in the
-instructions, placing the output of each run in a file named `sample-p-f`,
-where `p` is the page size, and `f` is the number of frames allocated to a 
-process.
+For the optimal replacement algorithm, I chose the [`multimap`]() from the C++
+STL:
 
-It will compile the program if there is no executable named `main` in the 
-same directory. It will also compile the program if the `main` binary in the
-same directory is older than 15 minutes.
+```C++
+/**
+ * @brief { page#, { index in q, reference} }. keyed on page numbers. this was
+ * chosen to exploit the property of multimaps that items with the same key
+ * are partitioned together in the order they were inserted. this means that
+ * each partition is effectively a FIFO queue, the head of which can be reached
+ * in O(log n) by a call to qmap->lower_bound(page).
+ *
+ */
 
-This script must be run with an input file named `input` in the same directory.
-The provided `input` file is simply a copy of the Sample input provided with
-the project instructions.
-
-```
-# to run this script
-./run.sh
-
-# to set executable permissions (if needed)
-chmod 755 *.sh
-```
-
-## `stats.sh`
-This script compiles the data from the sample runs into a file named `stats.csv`
-for import into spreadsheet applications for further analysis.  
-
-If there are no samples in the current directory, the script calls `run.sh` to
-generate samples, and then compiles them into the csv file `stats.csv`
-
-```
-# to run this script
-./stats.sh
-
-# to set executable permissions (if needed)
-chmod 755 *.sh
-```
-
-## Compiling and Running
-
-To compile manually from source code, run this command.
-```bash
-g++ -fpermissive -std=c++17 -g main.cpp -o main
-```
-
-To run the program for a given set of inputs, see below.
-```bash
-./main <p> <f> <input file>
-
-# provided below are commands to run each of the possible combinations
-# of page size and frame size, with the input file `input`
-./main 512 4 input
-./main 512 8 input
-./main 512 12 input
-./main 1024 4 input
-./main 1024 8 input
-./main 1024 12 input
-./main 2048 4 input
-./main 2048 8 input
-./main 2048 12 input
 ```
