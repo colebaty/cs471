@@ -41,19 +41,11 @@ stack structure as LRU, which did not require much modification.
 ### Optimal
 
 For the optimal replacement algorithm, I chose the [`multimap`](https://en.cppreference.com/w/cpp/container/multimap) from the C++
-STL:
-
-```C++
-/**
- * @brief { page#, { index in q, reference} }. keyed on page numbers. this was
- * chosen to exploit the property of multimaps that items with the same key
- * are partitioned together in the order they were inserted. this means that
- * each partition is effectively a FIFO queue, the head of which can be reached
- * in O(log n) by a call to qmap->lower_bound(page).
- *
- */
-
-```
+STL.  Records in the multimap had the form `{ page#, { index in q, reference} }`. 
+Records are keyed on page numbers. This was chosen to exploit the property of multimaps 
+that items with the same key are partitioned together in the order they were inserted. 
+This means that each partition is effectively a FIFO queue, the head of which can be 
+reached * in O(log n) by a call to `qmap->lower_bound(page)`.
 
 ## Scripts
 As in [PRODCONS](../prodcons/), I provided two scripts to help with
