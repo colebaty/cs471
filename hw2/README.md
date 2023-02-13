@@ -44,6 +44,8 @@ static struct Process {
     TAILQ_ENTRY(Process) entries; //linked list of queue members
 } *p;
 
+p = new Process();
+
 //add *p to the end of the list of entries in q
 TAILQ_INSERT_TAIL(&q, p, entries); 
 ```
