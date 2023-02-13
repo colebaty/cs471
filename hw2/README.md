@@ -28,7 +28,7 @@ language.
 
 struct Process {
     ...
-} *p;
+};
 
 std::queue<Process> q;
 q.push(new Process());
@@ -44,7 +44,7 @@ static struct Process {
     TAILQ_ENTRY(Process) entries; //linked list of queue members
 } *p;
 
-p = new Process();
+p = malloc(sizeof Process);
 
 //add *p to the end of the list of entries in q
 TAILQ_INSERT_TAIL(&q, p, entries); 
